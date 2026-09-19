@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#075b3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Leitura FORMS</title>
+<style>
+:root{
+  --green:#075b3a; --green2:#0b7a4b; --light:#eaf7f0; --bg:#f4f7f6;
+  --text:#17332a; --muted:#6d7b76; --border:#dce6e1; --white:#fff;
+  --shadow:0 8px 24px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,var(--green),#0a8150);color:white;padding:18px 16px 22px;position:sticky;top:0;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.headerline{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:flex;align-items:center;gap:10px}.sun{font-size:30px}.brand{font-size:25px;font-weight:800;letter-spacing:.5px}
+.subtitle{font-size:13px;opacity:.9;margin-top:2px}
+.count{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:8px 10px;border-radius:12px;text-align:center;font-size:12px}
+.count b{display:block;font-size:19px}
+main{max-width:1050px;margin:auto;padding:14px 14px 8px}
+.card{background:white;border:1px solid var(--border);border-radius:24px;box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+h2{font-size:20px;margin:0 0 15px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+label{font-size:14px;font-weight:800;margin-bottom:7px;display:block}
+input,select{width:100%;height:54px;border:1px solid #cfdcd6;border-radius:12px;padding:0 12px;font-size:17px;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(11,122,75,.1)}
+.req{color:#d92d20}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+button{border:0;border-radius:16px;min-height:52px;padding:0 12px;font-weight:800;font-size:16px;cursor:pointer}
+.primary{background:var(--green2);color:white}.secondary{background:#edf3f0;color:var(--green)}
+.blue{background:#2475dc;color:white}.orange{background:#ed9700;color:white}.gray{background:#66727a;color:white}.shareBtn{grid-column:1 / -1;max-width:290px}
+.message{font-size:13px;margin-top:10px;min-height:18px;color:var(--green2);font-weight:700}
+.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.toolbar input{min-width:0}
+
+.stage-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.stage-title h2{margin:0;font-size:21px}.badge{background:var(--light);color:var(--green);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
+.tablewrap{overflow:auto;border:1px solid var(--border);border-radius:13px}
+table{width:100%;border-collapse:collapse;min-width:650px;background:white}
+th{background:var(--green);color:white;text-align:left;padding:10px 9px;font-size:12px}
+td{padding:10px 9px;border-top:1px solid #e7eeeb;font-size:13px}
+tr:nth-child(even) td{background:#fafcfb}
+.empty{text-align:center;padding:24px;color:var(--muted)}
+.del{background:#feeceb;color:#b42318;min-height:34px;min-width:42px;padding:0 9px;font-size:16px;border:1px solid #f5c9c5}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.stat{background:var(--light);border-radius:20px;padding:16px}.stat b{font-size:26px;display:block;color:var(--green)}.stat span{font-size:13px;color:var(--muted)}
+footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 25px}
+@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.brand{font-size:22px}}
+@media(max-width:430px){.grid{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr 1fr}.actions button:last-child{grid-column:1 / -1}.stats{grid-template-columns:1fr 1fr}.toolbar{grid-template-columns:1fr auto}}
+@media print{
+  header,.formcard,.toolbar,.stagebar,.actions,.del,footer{display:none!important}
+  body{background:white}.card{box-shadow:none;border:0;padding:0}
+  main{max-width:none;padding:0}.tablewrap{overflow:visible}
+  table{min-width:0;font-size:11px}
+}
+
+.stage-block{margin-top:18px;padding-top:12px;border-top:1px solid var(--border)}
+.stage-block:first-child{margin-top:0;padding-top:0;border-top:0}
+.stagefilter label{display:block;margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:700}
+.stagefilter select{height:46px;width:100%;border:1px solid #cfdcd6;border-radius:12px;background:#edf7f2;color:var(--green);font-size:16px;font-weight:800;padding:0 13px}
+.stagefilter select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(11,122,75,.1)}
+</style>
+
+
+
+
+
+<link rel="icon" type="image/png" href="./icon.png">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="application-name" content="Leitura FORMS">
+<meta name="apple-mobile-web-app-title" content="Leitura FORMS">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+<header>
+  <div class="headerline">
+    <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras</div></div></div>
+    <div class="count"><b id="totalTop">0</b>leituras</div>
+  </div>
+</header>
+
+<main>
+  <section class="card formcard">
+    <h2>➕ Lançar nova leitura</h2>
+    <div class="grid">
+      <div><label>C — Código do cliente <span class="req">*</span></label><input id="codigo" inputmode="numeric" placeholder="Digite o C"></div>
+      <div><label>Número do medidor <span class="req">*</span></label><input id="medidor" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="Digite o medidor"></div>
+      <div><label>Leitura <span class="req">*</span></label><input id="leitura" inputmode="numeric" placeholder="Digite a leitura"></div>
+      <div><label>Etapa <span class="req">*</span></label><select id="etapaFiltro" aria-label="Etapa do lançamento"></select></div>
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="salvarLeitura()">💾 Salvar</button>
+      <button class="blue" onclick="exportarCSV()">⬇️ Exportar</button>
+      <button class="orange" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="primary shareBtn" id="btnCompartilharApp" type="button" aria-label="Compartilhar aplicativo">↗️ Compartilhar</button>
+    </div>
+    <div id="msg" class="message"></div>
+  </section>
+
+  <section class="card">
+    <div class="stats">
+      <div class="stat"><b id="total">0</b><span>Total de leituras</span></div>
+      <div class="stat"><b id="etapasUsadas">0/18</b><span>Etapas com lançamento</span></div>
+      <div class="stat"><b id="hoje">0</b><span>Lançadas hoje</span></div>
+    </div>
+    <div class="toolbar">
+      <input id="busca" placeholder="🔎 Pesquisar por C, medidor ou leitura..." oninput="renderStages()">
+      <button class="secondary" onclick="limparBusca()">Limpar</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="stage-title">
+      <h2>📍 Leituras por etapa</h2>
+      <span class="badge" id="etapasUsadasLabel">0/18 com lançamento</span>
+    </div>
+    <div id="stagesContainer"></div>
+  </section>
+</main>
+<footer>Leitura FORMS • Acompanhamento de Leituras</footer>
+
+
+<script>
+const KEY='solar_acompanhamento_leituras_v1';
+let registros=JSON.parse(localStorage.getItem(KEY)||'[]');
+let etapaAtual=1;
+
+const etapaFiltro=document.getElementById('etapaFiltro');
+
+for(let i=1;i<=18;i++){
+  const o=document.createElement('option');
+  o.value=i;
+  o.textContent='Etapa '+i;
+  etapaFiltro.appendChild(o);
+}
+etapaFiltro.value='1';
+
+function mudarEtapa(valor){
+  etapaAtual=Number(valor)||1;
+  etapaFiltro.value=String(etapaAtual);
+}
+
+function agora(){
+  const d=new Date();
+  return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+}
+function hojeISO(){
+  const d=new Date(); return d.toISOString().slice(0,10);
+}
+
+function salvarLeitura(){
+  const codigo=document.getElementById('codigo').value.trim();
+  const medidor=document.getElementById('medidor').value.trim();
+  const leitura=document.getElementById('leitura').value.trim();
+  const etapa=Number(etapaFiltro.value)||1;
+  const msg=document.getElementById('msg');
+
+  if(!codigo||!medidor||!leitura){
+    msg.textContent='⚠️ Preencha C, medidor e leitura.';
+    return;
+  }
+
+  registros.push({
+    id:Date.now()+Math.random(),
+    codigo,medidor,leitura,etapa,
+    data:agora(),
+    dia:hojeISO()
+  });
+
+  localStorage.setItem(KEY,JSON.stringify(registros));
+  document.getElementById('codigo').value='';
+  document.getElementById('medidor').value='';
+  document.getElementById('leitura').value='';
+
+  msg.textContent='✅ Leitura salva na Etapa '+etapa+'.';
+  renderStages();
+  setTimeout(()=>msg.textContent='',2500);
+}
+
+function renderStages(){
+  const q=document.getElementById('busca').value.trim().toLowerCase();
+  const container=document.getElementById('stagesContainer');
+  container.innerHTML='';
+
+  // Mostra somente as etapas que realmente possuem lançamentos.
+  // Assim, se houver lançamento apenas na Etapa 1, somente a Etapa 1 aparece.
+  const etapasComRegistros=[];
+  for(let etapa=1;etapa<=18;etapa++){
+    const lista=registros.filter(r=>
+      Number(r.etapa)===etapa &&
+      (!q || [r.codigo,r.medidor,r.leitura,r.data].some(x=>String(x).toLowerCase().includes(q)))
+    );
+    if(lista.length) etapasComRegistros.push({etapa,lista});
+  }
+
+  if(!etapasComRegistros.length){
+    container.innerHTML='<div class="empty">Nenhuma leitura lançada ainda.</div>';
+    atualizarResumo();
+    return;
+  }
+
+  etapasComRegistros.forEach(({etapa,lista})=>{
+    const box=document.createElement('div');
+    box.className='stage-block';
+
+    const title=document.createElement('div');
+    title.className='stage-title';
+    title.innerHTML=`<h2>Etapa ${etapa}</h2><span class="badge">${lista.length}${lista.length===1?' registro':' registros'}</span>`;
+    box.appendChild(title);
+
+    const wrap=document.createElement('div');
+    wrap.className='tablewrap';
+
+    const table=document.createElement('table');
+    table.innerHTML='<thead><tr><th>C</th><th>Número do medidor</th><th>Leitura</th><th>Data de lançamento</th><th>Excluir</th></tr></thead>';
+
+    const tbody=document.createElement('tbody');
+    lista.slice().reverse().forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><b>${esc(r.codigo)}</b></td><td>${esc(r.medidor)}</td><td><b>${esc(r.leitura)}</b></td><td>${esc(r.data)}</td><td><button class="del" title="Excluir leitura" aria-label="Excluir leitura" onclick="excluir('${r.id}')">🗑️</button></td>`;
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    box.appendChild(wrap);
+    container.appendChild(box);
+  });
+
+  atualizarResumo();
+}
+
+function atualizarResumo(){
+  document.getElementById('total').textContent=registros.length;
+  document.getElementById('etapasUsadas').textContent=new Set(registros.map(r=>Number(r.etapa))).size+'/18';
+  const label=document.getElementById('etapasUsadasLabel');
+  if(label) label.textContent=new Set(registros.map(r=>Number(r.etapa))).size+'/18 com lançamento';
+  document.getElementById('hoje').textContent=registros.filter(r=>r.dia===hojeISO()).length;
+}
+function excluir(id){
+  if(!confirm('Excluir esta leitura?')) return;
+  registros=registros.filter(r=>String(r.id)!==String(id));
+  localStorage.setItem(KEY,JSON.stringify(registros)); renderStages();
+}
+function limparBusca(){document.getElementById('busca').value='';renderStages()}
+function esc(v){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function exportarCSV(){
+  if(!registros.length){alert('Não há leituras para exportar.');return}
+  const linhas=[['C','Número do medidor','Leitura','Etapa','Data de lançamento']];
+  registros.forEach(r=>linhas.push([r.codigo,r.medidor,r.leitura,r.etapa,r.data]));
+  const csv='\ufeff'+linhas.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='leitura_forms_acompanhamento.csv';a.click();URL.revokeObjectURL(a.href);
+}
+if(etapaFiltro) etapaFiltro.value='1';
+renderStages();
+</script>
+
+
+
+
+<script id="shareAppScript">
+(function(){
+  function urlDoApp(){
+    return window.location.href.split('#')[0];
+  }
+  async function compartilharApp(){
+    const url = urlDoApp();
+    const dados = {
+      title: 'Leitura FORMS',
+      text: 'Acesse o aplicativo Leitura FORMS.',
+      url: url
+    };
+    try{
+      if(navigator.share){
+        await navigator.share(dados);
+      }else if(navigator.clipboard){
+        await navigator.clipboard.writeText(url);
+        alert('Link do aplicativo copiado.');
+      }else{
+        window.prompt('Copie o link do aplicativo:', url);
+      }
+    }catch(e){
+      if(e && e.name === 'AbortError') return;
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const b=document.getElementById('btnCompartilharApp');
+    if(b) b.addEventListener('click', compartilharApp);
+  });
+})();
+</script>
+
+</body>
+</html>
