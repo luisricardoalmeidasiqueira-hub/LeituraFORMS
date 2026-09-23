@@ -30,8 +30,9 @@ input,select{width:100%;height:54px;border:1px solid #cfdcd6;border-radius:12px;
 input:focus,select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(11,122,75,.1)}
 .req{color:#d92d20}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
 button{border:0;border-radius:16px;min-height:52px;padding:0 12px;font-weight:800;font-size:16px;cursor:pointer}
+button:disabled{opacity:.7;cursor:wait}
 .primary{background:var(--green2);color:white}.secondary{background:#edf3f0;color:var(--green)}
-.blue{background:#2475dc;color:white}.orange{background:#ed9700;color:white}.gray{background:#66727a;color:white}.shareBtn{grid-column:1 / -1;max-width:290px}
+.blue{background:#2475dc;color:white}.orange{background:#ed9700;color:white}.gray{background:#66727a;color:white}
 .message{font-size:13px;margin-top:10px;min-height:18px;color:var(--green2);font-weight:700}
 .toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.toolbar input{min-width:0}
 
@@ -78,17 +79,11 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 25px}
 .stagefilter select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(11,122,75,.1)}
 </style>
 
-
-
-
-
 <link rel="icon" type="image/png" href="./icon.png">
 <link rel="apple-touch-icon" href="./icon.png">
 <link rel="manifest" href="./manifest.json">
 <meta name="application-name" content="Leitura FORMS">
 <meta name="apple-mobile-web-app-title" content="Leitura FORMS">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
 <header>
@@ -111,7 +106,8 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 25px}
       <button class="primary" onclick="salvarLeitura()">💾 Salvar</button>
       <button class="blue" onclick="exportarCSV()">⬇️ Exportar</button>
       <button class="orange" onclick="window.print()">🖨️ Imprimir</button>
-      <button class="primary shareBtn" id="btnCompartilharApp" type="button" aria-label="Compartilhar aplicativo">↗️ Compartilhar</button>
+      <button class="primary" id="btnCompartilharApp" type="button" aria-label="Compartilhar aplicativo">↗️ Compartilhar</button>
+      <button class="gray" id="btnAtualizarApp" type="button" aria-label="Atualizar aplicativo">🔄 Atualizar app</button>
     </div>
     <div id="msg" class="message"></div>
   </section>
@@ -202,8 +198,6 @@ function renderStages(){
   const container=document.getElementById('stagesContainer');
   container.innerHTML='';
 
-  // O seletor de Etapa controla exatamente o que aparece abaixo.
-  // Ex.: Etapa 8 selecionada -> somente os lançamentos da Etapa 8.
   const lista=registros.filter(r=>
     Number(r.etapa)===etapaSelecionada &&
     (!q || [r.codigo,r.medidor,r.leitura,r.data].some(x=>String(x).toLowerCase().includes(q)))
@@ -270,13 +264,14 @@ if(etapaFiltro) etapaFiltro.value='1';
 renderStages();
 </script>
 
-
-
-
 <script id="shareAppScript">
 (function(){
+  // Link limpo do app (sem o parâmetro ?v= usado na atualização)
   function urlDoApp(){
-    return window.location.href.split('#')[0];
+    const u=new URL(window.location.href);
+    u.hash='';
+    u.searchParams.delete('v');
+    return u.toString();
   }
   async function compartilharApp(){
     const url = urlDoApp();
@@ -298,9 +293,36 @@ renderStages();
       if(e && e.name === 'AbortError') return;
     }
   }
+
+  // Busca a versão mais nova do app no servidor.
+  // As leituras salvas NÃO são apagadas (ficam no localStorage).
+  async function atualizarApp(){
+    const b=document.getElementById('btnAtualizarApp');
+    if(b){ b.disabled=true; b.textContent='⏳ Atualizando...'; }
+    try{
+      if('serviceWorker' in navigator){
+        const regs=await navigator.serviceWorker.getRegistrations();
+        for(const r of regs){
+          try{ await r.update(); }catch(_){}
+          try{ await r.unregister(); }catch(_){}
+        }
+      }
+      if(window.caches){
+        const nomes=await caches.keys();
+        await Promise.all(nomes.map(n=>caches.delete(n)));
+      }
+    }catch(_){}
+    const u=new URL(window.location.href);
+    u.hash='';
+    u.searchParams.set('v', Date.now());
+    window.location.replace(u.toString());
+  }
+
   document.addEventListener('DOMContentLoaded', function(){
     const b=document.getElementById('btnCompartilharApp');
     if(b) b.addEventListener('click', compartilharApp);
+    const a=document.getElementById('btnAtualizarApp');
+    if(a) a.addEventListener('click', atualizarApp);
   });
 })();
 </script>
