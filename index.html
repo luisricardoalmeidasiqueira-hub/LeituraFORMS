@@ -63,7 +63,14 @@ button:disabled{opacity:.7;cursor:wait}
   border-radius:999px;padding:0 4px;line-height:14px;min-width:14px;text-align:center;z-index:1}
 .calday.sel .qtd{background:#fff;color:var(--green);box-shadow:0 0 0 1px var(--green2)}
 .calfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
-.calfoot span{font-size:11.5px;color:var(--muted);font-weight:700}
+.calfoot{align-items:flex-start}
+.caletapas{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:0}
+.caletapas .vazio{font-size:11.5px;color:var(--muted);font-weight:700;line-height:30px}
+.etq{min-height:30px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:800;
+  background:var(--light);color:var(--green);border:1.5px solid #cfe6da;display:inline-flex;align-items:center;gap:5px}
+.etq b{background:var(--green);color:#fff;border-radius:999px;font-size:10px;padding:0 5px;line-height:15px;min-width:15px;text-align:center}
+.etq.ativa{background:var(--green2);color:#fff;border-color:var(--green2)}
+.etq.ativa b{background:#fff;color:var(--green)}
 .chip{min-height:30px;font-size:12px;padding:0 10px;border-radius:999px;background:#edf3f0;color:var(--green)}
 .printtitle{display:none}
 
@@ -121,7 +128,7 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
 <body>
 <header>
   <div class="headerline">
-    <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras</div></div></div>
+    <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras • <span class="appVersao"></span></div></div></div>
     <div class="count"><b id="totalTop">0</b>no mês</div>
   </div>
 </header>
@@ -156,7 +163,7 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
       <div class="calgrid" id="calGrid"></div>
     </div>
     <div class="calfoot">
-      <span id="calInfo"></span>
+      <div class="caletapas" id="calEtapas"></div>
       <div style="display:flex;gap:6px">
         <button class="chip" type="button" id="btnMesInteiro" onclick="verMesInteiro()" style="display:none">Mês inteiro</button>
         <button class="chip" type="button" onclick="irHoje()">Hoje</button>
@@ -185,10 +192,21 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
     <div id="stagesContainer"></div>
   </section>
 </main>
-<footer>Leitura FORMS • Acompanhamento de Leituras</footer>
+<footer>Leitura FORMS • <span class="appVersao"></span> • atualizado em <span id="appData"></span></footer>
 
 
 <script>
+/* ===== VERSÃO DO APP =====
+   A cada atualização, mude só estas duas linhas.
+   1.0 = versão original
+   1.1 = calendário por mês + campo de data
+   1.2 = calendário compacto (abre/fecha)
+   1.3 = etiquetas das etapas com lançamento no mês */
+const APP_VERSAO='1.3';
+const APP_DATA='01/10/2026';
+document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
+document.getElementById('appData').textContent=APP_DATA;
+
 const KEY='solar_acompanhamento_leituras_v1';
 let registros=JSON.parse(localStorage.getItem(KEY)||'[]');
 let etapaAtual=1;
@@ -277,6 +295,7 @@ function irHoje(){
   renderStages();
 }
 function verMesInteiro(){diaSel=null;renderStages()}
+function abrirEtapa(e){etapaFiltro.value=String(e);renderStages()}
 const CAL_KEY='leitura_forms_calendario_aberto';
 function alternarCalendario(){
   const c=document.getElementById('calCard');
@@ -316,8 +335,18 @@ function renderCalendario(){
   }
   grid.innerHTML=html;
 
-  const totalEtapaMes=Object.values(porDia).reduce((a,b)=>a+b,0);
-  document.getElementById('calInfo').textContent=`Etapa ${etapa}: ${totalEtapaMes} ${totalEtapaMes===1?'leitura':'leituras'} no mês`;
+  // Etapas que têm lançamento no mês (ou no dia tocado) — tocar abre a etapa
+  const porEtapa={};
+  registrosDoPeriodo().forEach(r=>{const e=Number(r.etapa);porEtapa[e]=(porEtapa[e]||0)+1});
+  const etapas=Object.keys(porEtapa).map(Number).sort((a,b)=>a-b);
+  const boxEt=document.getElementById('calEtapas');
+  if(!etapas.length){
+    boxEt.innerHTML=`<span class="vazio">Sem lançamentos ${diaSel?'neste dia':'neste mês'}</span>`;
+  }else{
+    boxEt.innerHTML=etapas.map(e=>
+      `<button type="button" class="etq${e===etapa?' ativa':''}" onclick="abrirEtapa(${e})" aria-label="Abrir Etapa ${e}, ${porEtapa[e]} leituras">Etapa ${e} <b>${porEtapa[e]}</b></button>`
+    ).join('');
+  }
   document.getElementById('btnMesInteiro').style.display=diaSel?'':'none';
 }
 
