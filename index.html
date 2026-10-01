@@ -27,10 +27,11 @@ header{background:linear-gradient(135deg,var(--green),#0a8150);color:white;
 .count b{display:block;font-size:15px}
 main{max-width:1050px;margin:auto;padding:12px 12px 8px}
 .card{background:white;border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
-h2{font-size:16px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+h2{font-size:16px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 label{font-size:12px;font-weight:800;margin-bottom:5px;display:block}
 /* 16px nos campos evita o zoom automático do iPhone ao tocar */
 input,select{width:100%;height:44px;border:1px solid #cfdcd6;border-radius:10px;padding:0 10px;font-size:16px;background:#fff;color:var(--text);outline:none}
+input[type=date]{display:block;min-width:0;-webkit-appearance:none;appearance:none;line-height:44px}
 input:focus,select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(11,122,75,.1)}
 .req{color:#d92d20}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 button{border:0;border-radius:12px;min-height:42px;padding:0 10px;font-weight:800;font-size:14px;cursor:pointer}
@@ -39,6 +40,32 @@ button:disabled{opacity:.7;cursor:wait}
 .blue{background:#2475dc;color:white}.orange{background:#ed9700;color:white}.gray{background:#66727a;color:white}
 .message{font-size:12px;margin-top:8px;min-height:16px;color:var(--green2);font-weight:700}
 .toolbar{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.toolbar input{min-width:0}
+
+/* ===== Calendário ===== */
+.calcard{padding:10px 12px}
+.calhead{display:flex;align-items:center;gap:6px}
+.calnav{width:36px;min-width:36px;min-height:36px;padding:0;border-radius:10px;background:#edf3f0;color:var(--green);font-size:14px}
+.calmes{flex:1;min-width:0;min-height:36px;padding:0 6px;border-radius:10px;background:transparent;color:var(--text);
+  font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px}
+.calmes .seta{font-size:11px;color:var(--muted);transition:transform .2s}
+.calcard.aberto .calmes .seta{transform:rotate(180deg)}
+.calcorpo{display:none;margin-top:8px}
+.calcard.aberto .calcorpo{display:block}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.calwd{font-size:10px;font-weight:800;color:var(--muted);text-align:center;padding:0 0 2px}
+.calday{position:relative;min-height:32px;height:32px;padding:0;border-radius:8px;background:#f7faf9;border:1.5px solid transparent;
+  color:var(--text);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.calday.vazio{visibility:hidden;pointer-events:none}
+.calday.tem{background:var(--light)}
+.calday.hoje{border-color:var(--green2)}
+.calday.sel{background:var(--green2);color:#fff;border-color:var(--green2)}
+.calday .qtd{position:absolute;top:-4px;right:-3px;font-size:8.5px;font-weight:800;background:var(--green);color:#fff;
+  border-radius:999px;padding:0 4px;line-height:14px;min-width:14px;text-align:center;z-index:1}
+.calday.sel .qtd{background:#fff;color:var(--green);box-shadow:0 0 0 1px var(--green2)}
+.calfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+.calfoot span{font-size:11.5px;color:var(--muted);font-weight:700}
+.chip{min-height:30px;font-size:12px;padding:0 10px;border-radius:999px;background:#edf3f0;color:var(--green)}
+.printtitle{display:none}
 
 .stage-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
 .stage-title h2{margin:0;font-size:16px}.badge{background:var(--light);color:var(--green);border-radius:999px;padding:4px 9px;font-size:11px;font-weight:700}
@@ -56,7 +83,7 @@ tr td:first-child{position:relative}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
 .stat{background:var(--light);border-radius:14px;padding:10px 12px}.stat b{font-size:20px;display:block;color:var(--green)}.stat span{font-size:11px;color:var(--muted)}
 footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(safe-area-inset-bottom,0px) + 20px)}
-@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.campoData{grid-column:1 / -1}}
 @media(max-width:430px){
   .grid{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr 1fr}.actions button:last-child{grid-column:1 / -1}.toolbar{grid-template-columns:1fr auto}
   .tablewrap{overflow:hidden}
@@ -68,9 +95,11 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
   th:nth-child(4),td:nth-child(4){width:14%}
   th:nth-child(5),td:nth-child(5){width:22%}
   .del{width:28px;min-width:28px;height:28px;font-size:14px}
+  .calday{min-height:42px;font-size:13px}
 }
 @media print{
-  header,.formcard,.toolbar,.stagebar,.actions,.del,footer{display:none!important}
+  header,.formcard,.calcard,.toolbar,.stagebar,.actions,.del,.deleteHead,.deleteCell,footer{display:none!important}
+  .printtitle{display:block;font-size:16px;font-weight:800;margin:0 0 10px}
   body{background:white}.card{box-shadow:none;border:0;padding:0}
   main{max-width:none;padding:0}.tablewrap{overflow:visible}
   table{min-width:0;font-size:11px}
@@ -93,7 +122,7 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
 <header>
   <div class="headerline">
     <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras</div></div></div>
-    <div class="count"><b id="totalTop">0</b>leituras</div>
+    <div class="count"><b id="totalTop">0</b>no mês</div>
   </div>
 </header>
 
@@ -105,6 +134,7 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
       <div><label>Número do medidor <span class="req">*</span></label><input id="medidor" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="Digite o medidor"></div>
       <div><label>Leitura <span class="req">*</span></label><input id="leitura" inputmode="numeric" placeholder="Digite a leitura"></div>
       <div><label>Etapa <span class="req">*</span></label><select id="etapaFiltro" aria-label="Etapa do lançamento" onchange="renderStages()"></select></div>
+      <div class="campoData"><label>Data da leitura <span class="req">*</span></label><input id="dataLanc" type="date" aria-label="Data da leitura"></div>
     </div>
     <div class="actions">
       <button class="primary" onclick="salvarLeitura()">💾 Salvar</button>
@@ -116,10 +146,28 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
     <div id="msg" class="message"></div>
   </section>
 
+  <section class="card calcard" id="calCard">
+    <div class="calhead">
+      <button class="calnav" type="button" onclick="mudarMes(-1)" aria-label="Mês anterior">◀</button>
+      <button class="calmes" type="button" onclick="alternarCalendario()" aria-label="Mostrar ou esconder os dias">📅 <span id="calTitulo">—</span> <span class="seta">▼</span></button>
+      <button class="calnav" type="button" onclick="mudarMes(1)" aria-label="Próximo mês">▶</button>
+    </div>
+    <div class="calcorpo">
+      <div class="calgrid" id="calGrid"></div>
+    </div>
+    <div class="calfoot">
+      <span id="calInfo"></span>
+      <div style="display:flex;gap:6px">
+        <button class="chip" type="button" id="btnMesInteiro" onclick="verMesInteiro()" style="display:none">Mês inteiro</button>
+        <button class="chip" type="button" onclick="irHoje()">Hoje</button>
+      </div>
+    </div>
+  </section>
+
   <section class="card">
     <div class="stats">
-      <div class="stat"><b id="total">0</b><span>Total de leituras</span></div>
-      <div class="stat"><b id="etapasUsadas">0/18</b><span>Etapas com lançamento</span></div>
+      <div class="stat"><b id="total">0</b><span>Leituras no mês</span></div>
+      <div class="stat"><b id="etapasUsadas">0/18</b><span>Etapas no mês</span></div>
       <div class="stat"><b id="hoje">0</b><span>Lançadas hoje</span></div>
     </div>
     <div class="toolbar">
@@ -129,6 +177,7 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
   </section>
 
   <section class="card">
+    <div class="printtitle" id="printTitle"></div>
     <div class="stage-title">
       <h2>📍 Leituras por etapa</h2>
       <span class="badge" id="etapasUsadasLabel">0/18 com lançamento</span>
@@ -144,7 +193,15 @@ const KEY='solar_acompanhamento_leituras_v1';
 let registros=JSON.parse(localStorage.getItem(KEY)||'[]');
 let etapaAtual=1;
 
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const SEMANA=['D','S','T','Q','Q','S','S'];
+const _hj=new Date();
+let anoVisto=_hj.getFullYear();
+let mesVisto=_hj.getMonth();   // 0 = janeiro
+let diaSel=null;               // 'AAAA-MM-DD' ou null (mês inteiro)
+
 const etapaFiltro=document.getElementById('etapaFiltro');
+const dataLanc=document.getElementById('dataLanc');
 
 for(let i=1;i<=18;i++){
   const o=document.createElement('option');
@@ -159,19 +216,24 @@ function mudarEtapa(valor){
   etapaFiltro.value=String(etapaAtual);
 }
 
-function agora(){
-  const d=new Date();
-  return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
-}
-function hojeISO(){
-  const d=new Date(); return d.toISOString().slice(0,10);
-}
+function pad(n){return String(n).padStart(2,'0')}
+// Data no fuso do aparelho (antes usava UTC e, depois das 21h, caía no dia seguinte)
+function isoLocal(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function hojeISO(){return isoLocal(new Date())}
+function brData(iso){const p=String(iso).split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+function horaAgora(){return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+function prefixoMes(){return anoVisto+'-'+pad(mesVisto+1)}
+function nomeMes(){return MESES[mesVisto]+' de '+anoVisto}
+function nomePeriodo(){return diaSel?brData(diaSel):nomeMes()}
+
+dataLanc.value=hojeISO();
 
 function salvarLeitura(){
   const codigo=document.getElementById('codigo').value.trim();
   const medidor=document.getElementById('medidor').value.trim();
   const leitura=document.getElementById('leitura').value.trim();
   const etapa=Number(etapaFiltro.value)||1;
+  const dia=dataLanc.value||hojeISO();
   const msg=document.getElementById('msg');
 
   if(!codigo||!medidor||!leitura){
@@ -182,8 +244,8 @@ function salvarLeitura(){
   registros.push({
     id:Date.now()+Math.random(),
     codigo,medidor,leitura,etapa,
-    data:agora(),
-    dia:hojeISO()
+    data:brData(dia)+', '+horaAgora(),
+    dia:dia
   });
 
   localStorage.setItem(KEY,JSON.stringify(registros));
@@ -191,24 +253,93 @@ function salvarLeitura(){
   document.getElementById('medidor').value='';
   document.getElementById('leitura').value='';
 
-  msg.textContent='✅ Leitura salva na Etapa '+etapa+'.';
+  // Se lançou em outro mês, o calendário vai pra esse mês
+  const [a,m]=dia.split('-').map(Number);
+  if(a!==anoVisto||m-1!==mesVisto){anoVisto=a;mesVisto=m-1;diaSel=null}
+  else if(diaSel&&diaSel!==dia){diaSel=null}
+
+  msg.textContent='✅ Leitura salva na Etapa '+etapa+' em '+brData(dia)+'.';
   renderStages();
   setTimeout(()=>msg.textContent='',2500);
 }
 
+/* ===== Calendário ===== */
+function mudarMes(delta){
+  mesVisto+=delta;
+  if(mesVisto<0){mesVisto=11;anoVisto--}
+  if(mesVisto>11){mesVisto=0;anoVisto++}
+  diaSel=null;
+  renderStages();
+}
+function irHoje(){
+  const d=new Date();
+  anoVisto=d.getFullYear();mesVisto=d.getMonth();diaSel=null;
+  renderStages();
+}
+function verMesInteiro(){diaSel=null;renderStages()}
+const CAL_KEY='leitura_forms_calendario_aberto';
+function alternarCalendario(){
+  const c=document.getElementById('calCard');
+  c.classList.toggle('aberto');
+  try{localStorage.setItem(CAL_KEY,c.classList.contains('aberto')?'1':'0')}catch(_){}
+}
+try{if(localStorage.getItem(CAL_KEY)==='1') document.getElementById('calCard').classList.add('aberto')}catch(_){}
+function tocarDia(iso){diaSel=(diaSel===iso)?null:iso;renderStages()}
+
+function renderCalendario(){
+  const etapa=Number(etapaFiltro.value)||1;
+  const pref=prefixoMes();
+  const hoje=hojeISO();
+  const porDia={};
+  registros.forEach(r=>{
+    if(Number(r.etapa)===etapa&&String(r.dia||'').startsWith(pref)){
+      porDia[r.dia]=(porDia[r.dia]||0)+1;
+    }
+  });
+
+  const t=diaSel?brData(diaSel):nomeMes();
+  document.getElementById('calTitulo').textContent=t.charAt(0).toUpperCase()+t.slice(1);
+
+  const grid=document.getElementById('calGrid');
+  let html=SEMANA.map(s=>`<div class="calwd">${s}</div>`).join('');
+  const primeiro=new Date(anoVisto,mesVisto,1).getDay();
+  const qtdDias=new Date(anoVisto,mesVisto+1,0).getDate();
+  for(let i=0;i<primeiro;i++) html+='<div class="calday vazio"></div>';
+  for(let d=1;d<=qtdDias;d++){
+    const iso=pref+'-'+pad(d);
+    const n=porDia[iso]||0;
+    const cls=['calday'];
+    if(n) cls.push('tem');
+    if(iso===hoje) cls.push('hoje');
+    if(iso===diaSel) cls.push('sel');
+    html+=`<button type="button" class="${cls.join(' ')}" onclick="tocarDia('${iso}')" aria-label="Dia ${d}${n?', '+n+' leituras':''}">${d}${n?`<span class="qtd">${n}</span>`:''}</button>`;
+  }
+  grid.innerHTML=html;
+
+  const totalEtapaMes=Object.values(porDia).reduce((a,b)=>a+b,0);
+  document.getElementById('calInfo').textContent=`Etapa ${etapa}: ${totalEtapaMes} ${totalEtapaMes===1?'leitura':'leituras'} no mês`;
+  document.getElementById('btnMesInteiro').style.display=diaSel?'':'none';
+}
+
+function registrosDoPeriodo(){
+  return registros.filter(r=>diaSel?r.dia===diaSel:String(r.dia||'').startsWith(prefixoMes()));
+}
+
 function renderStages(){
+  renderCalendario();
   const q=document.getElementById('busca').value.trim().toLowerCase();
   const etapaSelecionada=Number(document.getElementById('etapaFiltro').value)||1;
   const container=document.getElementById('stagesContainer');
   container.innerHTML='';
+  document.getElementById('printTitle').textContent='Leitura FORMS • Etapa '+etapaSelecionada+' • '+nomePeriodo();
 
-  const lista=registros.filter(r=>
+  const lista=registrosDoPeriodo().filter(r=>
     Number(r.etapa)===etapaSelecionada &&
     (!q || [r.codigo,r.medidor,r.leitura,r.data].some(x=>String(x).toLowerCase().includes(q)))
   );
 
   if(!lista.length){
-    container.innerHTML=`<div class="empty">Nenhuma leitura lançada na Etapa ${etapaSelecionada}.</div>`;
+    container.innerHTML=`<div class="empty">Nenhuma leitura na Etapa ${etapaSelecionada} em ${nomePeriodo()}.</div>`;
     atualizarResumo();
     return;
   }
@@ -218,7 +349,7 @@ function renderStages(){
 
   const title=document.createElement('div');
   title.className='stage-title';
-  title.innerHTML=`<h2>Etapa ${etapaSelecionada}</h2><span class="badge">${lista.length}${lista.length===1?' registro':' registros'}</span>`;
+  title.innerHTML=`<h2>Etapa ${etapaSelecionada} • <span style="text-transform:capitalize">${nomePeriodo()}</span></h2><span class="badge">${lista.length}${lista.length===1?' registro':' registros'}</span>`;
   box.appendChild(title);
 
   const wrap=document.createElement('div');
@@ -243,12 +374,14 @@ function renderStages(){
 }
 
 function atualizarResumo(){
-  document.getElementById('total').textContent=registros.length;
+  const doMes=registros.filter(r=>String(r.dia||'').startsWith(prefixoMes()));
+  const etapasMes=new Set(doMes.map(r=>Number(r.etapa))).size;
+  document.getElementById('total').textContent=doMes.length;
   const topo=document.getElementById('totalTop');
-  if(topo) topo.textContent=registros.length;
-  document.getElementById('etapasUsadas').textContent=new Set(registros.map(r=>Number(r.etapa))).size+'/18';
+  if(topo) topo.textContent=doMes.length;
+  document.getElementById('etapasUsadas').textContent=etapasMes+'/18';
   const label=document.getElementById('etapasUsadasLabel');
-  if(label) label.textContent=new Set(registros.map(r=>Number(r.etapa))).size+'/18 com lançamento';
+  if(label) label.textContent=etapasMes+'/18 com lançamento';
   document.getElementById('hoje').textContent=registros.filter(r=>r.dia===hojeISO()).length;
 }
 function excluir(id){
@@ -258,13 +391,19 @@ function excluir(id){
 }
 function limparBusca(){document.getElementById('busca').value='';renderStages()}
 function esc(v){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+// Exporta só o período que está na tela (mês inteiro ou o dia tocado), todas as etapas
 function exportarCSV(){
-  if(!registros.length){alert('Não há leituras para exportar.');return}
+  const lista=registrosDoPeriodo();
+  if(!lista.length){alert('Não há leituras em '+nomePeriodo()+' para exportar.');return}
   const linhas=[['C','Número do medidor','Leitura','Etapa','Data de lançamento']];
-  registros.forEach(r=>linhas.push([r.codigo,r.medidor,r.leitura,r.etapa,r.data]));
+  lista.slice().sort((a,b)=>Number(a.etapa)-Number(b.etapa)||String(a.dia).localeCompare(String(b.dia)))
+    .forEach(r=>linhas.push([r.codigo,r.medidor,r.leitura,r.etapa,r.data]));
   const csv='\ufeff'+linhas.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='leitura_forms_acompanhamento.csv';a.click();URL.revokeObjectURL(a.href);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='leitura_forms_'+(diaSel||prefixoMes())+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
 }
 if(etapaFiltro) etapaFiltro.value='1';
 renderStages();
