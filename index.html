@@ -107,6 +107,8 @@ input.auto{background:#eaf7f0;border-color:var(--green2)}
 .st.ok{background:#e7f6ec;color:#0b7a4b;border:1px solid #bfe3cc}
 .etq .pd{background:#ed9700}
 .etapanota{font-size:10.5px;font-weight:700;color:var(--green2)}
+.prazo{background:transparent;min-height:20px;padding:0 2px 0 0;font-size:12px;vertical-align:baseline}
+.prazotxt{font-size:10px;font-weight:800;color:#b42318}
 .formsopc{margin-top:10px}
 .edit{background:#e8f0fe;color:#1a56b8;border:1px solid #c5d8f8;width:32px;min-width:32px;height:30px;min-height:30px;padding:0;border-radius:8px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}
 .deleteCell .acoes{display:flex;flex-direction:column;gap:5px;align-items:center}
@@ -213,7 +215,7 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
       <div><label>Número do medidor <span class="req">*</span></label><input id="medidor" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="Digite o medidor"></div>
       <div><label>Leitura <span class="req">*</span></label><input id="leitura" inputmode="numeric" placeholder="Digite a leitura"></div>
       <div><label>Etapa <span class="req">*</span> <span class="etapanota" id="etapaNota"></span></label><select id="etapaFiltro" aria-label="Etapa do lançamento" onchange="renderStages()"></select></div>
-      <div class="campoData"><label>Data da leitura <span class="req">*</span></label><input id="dataLanc" type="date" aria-label="Data da leitura" onchange="etapaPelaData(this.value)"></div>
+      <div class="campoData"><label>Data da leitura <span class="req">*</span></label><input id="dataLanc" type="date" aria-label="Data da leitura" onchange="etapaPelaData(this.value)" oninput="etapaPelaData(this.value)"></div>
     </div>
     <div class="formsopc">
       <label>Lançou no Forms para arrumar?</label>
@@ -295,8 +297,14 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
    1.7 = segunda tentativa com mais zoom quando a foto é tirada de longe
          ou com outra conta atrás (código e data não se perdem)
    1.8 = escolha "Falta lançar" / "Já lancei" no formulário, na hora de salvar
-   1.9 = lápis ✏️ para editar a leitura (junto da lixeira 🗑️) */
-const APP_VERSAO='1.9';
+   1.9 = lápis ✏️ para editar a leitura (junto da lixeira 🗑️)
+   2.0 = etapa pelo calendário mais garantida no iPhone: atualiza ao trocar a
+         data e quando o app volta do fundo num dia novo
+   2.1 = na foto, a etapa vem da "Próxima leitura" da conta (certa mesmo
+         quando a leitura foi feita atrasada)
+   2.2 = bolinha 🟢 no dia da etapa / 🔴 atrasada (com os dias), toque explica
+   2.3 = foto da conta é apagada quando a leitura vira "Lançado" (não enche o celular) */
+const APP_VERSAO='2.3';
 const APP_DATA='13/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
@@ -366,6 +374,35 @@ function etapaDoDia(iso){
   if(!linha||!p[2]) return 0;
   return linha.split(' ').indexOf(p[2])+1;
 }
+/* v2.2: no prazo ou atrasada?
+   Compara a data da leitura com o dia da etapa no calendário
+   (no mês da leitura ou no mês anterior, para a etapa do fim do mês). */
+function diaDaEtapa(ano,mes,etapa){
+  const k=ano+'-'+String(mes).padStart(2,'0');
+  const linha=CAL_LEITURA[k]; if(!linha) return '';
+  const d=linha.split(' ')[etapa-1]; return d?k+'-'+d:'';
+}
+function prazoLeitura(r){
+  if(!r.dia||!r.etapa) return null;
+  const [a,m]=r.dia.split('-').map(Number);
+  const ant=m===1?[a-1,12]:[a,m-1];
+  const cands=[diaDaEtapa(a,m,Number(r.etapa)),diaDaEtapa(ant[0],ant[1],Number(r.etapa))]
+    .filter(d=>d&&d<=r.dia).sort();
+  if(!cands.length) return null;
+  const prog=cands[cands.length-1];
+  const dias=Math.round((new Date(r.dia+'T12:00')-new Date(prog+'T12:00'))/864e5);
+  return {dias,prog};
+}
+function bolinhaPrazo(r){
+  const p=prazoLeitura(r);
+  if(!p) return '';
+  if(p.dias===0) return `<button type="button" class="prazo" title="No dia da etapa" onclick="legendaPrazo()">🟢</button>`;
+  return `<button type="button" class="prazo" title="Atrasada" onclick="legendaPrazo()">🔴</button><span class="prazotxt">${p.dias} ${p.dias===1?'dia':'dias'} atrasada</span><br>`;
+}
+function legendaPrazo(){
+  alert('🟢 Leitura feita no dia da etapa, pelo calendário de leitura.\n\n🔴 Leitura atrasada: feita depois do dia da etapa. Mostra quantos dias atrasou.\n\nSem bolinha: data fora do calendário cadastrado no app.');
+}
+
 // Escolhe a etapa sozinho pela data (você ainda pode trocar no seletor)
 function etapaPelaData(iso,origem){
   const nota=document.getElementById('etapaNota');
@@ -401,7 +438,8 @@ function salvarLeitura(){
     if(r){
       const hora=String(r.data||'').split(', ')[1]||horaAgora();
       Object.assign(r,{codigo,medidor,leitura,etapa,dia,data:brData(dia)+', '+hora,lancado:formsNovo});
-      if(fotoAtual){ r.foto=true; fotoGuardar(r.id,fotoAtual).catch(()=>{}); }
+      if(fotoAtual && !formsNovo){ r.foto=true; fotoGuardar(r.id,fotoAtual).catch(()=>{}); }
+      descartarFotoSeLancada(r);
       lembrarLetraMedidor(medidor);
     }
     localStorage.setItem(KEY,JSON.stringify(registros));
@@ -415,7 +453,7 @@ function salvarLeitura(){
   }
 
   const novoId=Date.now()+Math.random();
-  const temFoto=!!fotoAtual;
+  const temFoto=!!fotoAtual && !formsNovo;   // v2.3: já lançada não guarda foto
   registros.push({
     id:novoId,
     codigo,medidor,leitura,etapa,
@@ -426,7 +464,8 @@ function salvarLeitura(){
   });
   lembrarLetraMedidor(medidor);
   escolherForms(false);  // volta para "Falta lançar" na próxima leitura
-  if(temFoto){ fotoGuardar(novoId,fotoAtual).catch(()=>{}); tirarFoto(); }
+  if(temFoto) fotoGuardar(novoId,fotoAtual).catch(()=>{});
+  if(fotoAtual) tirarFoto();
 
   localStorage.setItem(KEY,JSON.stringify(registros));
   document.getElementById('codigo').value='';
@@ -561,7 +600,7 @@ function renderStages(){
   const tbody=document.createElement('tbody');
   lista.slice().reverse().forEach(r=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><b>${esc(r.codigo)}</b>${r.foto?` <button class="fotoico" type="button" title="Ver foto da conta" aria-label="Ver foto da conta" onclick="abrirFotoSalva('${r.id}')">📷</button>`:''}</td><td>${esc(r.medidor)}</td><td class="deleteCell"><div class="acoes"><button class="edit" type="button" title="Editar leitura" aria-label="Editar leitura" onclick="editar('${r.id}')">✏️</button><button class="del" title="Excluir leitura" aria-label="Excluir leitura" onclick="excluir('${r.id}')">🗑️</button></div></td><td><b>${esc(r.leitura)}</b></td><td>${filtroForms==='pend'?'<b>Etapa '+esc(r.etapa)+'</b><br>':''}${esc(r.data)}<br><button type="button" class="st ${estaLancado(r)?'ok':'pend'}" title="Tocar para trocar" onclick="alternarLancado('${r.id}')">${estaLancado(r)?'✅ Lançado':'⏳ Falta lançar'}</button></td>`;
+    tr.innerHTML=`<td><b>${esc(r.codigo)}</b>${r.foto?` <button class="fotoico" type="button" title="Ver foto da conta" aria-label="Ver foto da conta" onclick="abrirFotoSalva('${r.id}')">📷</button>`:''}</td><td>${esc(r.medidor)}</td><td class="deleteCell"><div class="acoes"><button class="edit" type="button" title="Editar leitura" aria-label="Editar leitura" onclick="editar('${r.id}')">✏️</button><button class="del" title="Excluir leitura" aria-label="Excluir leitura" onclick="excluir('${r.id}')">🗑️</button></div></td><td><b>${esc(r.leitura)}</b></td><td>${filtroForms==='pend'?'<b>Etapa '+esc(r.etapa)+'</b><br>':''}${bolinhaPrazo(r)}${esc(r.data)}<br><button type="button" class="st ${estaLancado(r)?'ok':'pend'}" title="Tocar para trocar" onclick="alternarLancado('${r.id}')">${estaLancado(r)?'✅ Lançado':'⏳ Falta lançar'}</button></td>`;
     tbody.appendChild(tr);
   });
 
@@ -596,6 +635,14 @@ function escolherForms(v){
   document.getElementById('optOk').classList.toggle('on',formsNovo);
 }
 function estaLancado(r){return r.lancado!==false}
+/* v2.3: a foto serve só para preencher e conferir.
+   Quando a leitura vira "Lançado", a foto é apagada do aparelho. */
+function descartarFotoSeLancada(r){
+  if(r&&estaLancado(r)&&r.foto){
+    r.foto=false;
+    fotoApagar(r.id).catch(()=>{});
+  }
+}
 function mudarFiltro(f){
   filtroForms=f;
   document.getElementById('fTodos').classList.toggle('on',f==='todos');
@@ -607,6 +654,7 @@ function alternarLancado(id){
   const r=registros.find(x=>String(x.id)===String(id));
   if(!r) return;
   r.lancado=!estaLancado(r);
+  descartarFotoSeLancada(r);
   localStorage.setItem(KEY,JSON.stringify(registros));
   renderStages();
 }
@@ -614,7 +662,7 @@ function marcarTodasLancadas(){
   const pend=registros.filter(r=>!estaLancado(r));
   if(!pend.length) return;
   if(!confirm('Marcar as '+pend.length+' leituras como já lançadas no Forms?')) return;
-  pend.forEach(r=>r.lancado=true);
+  pend.forEach(r=>{r.lancado=true; descartarFotoSeLancada(r);});
   localStorage.setItem(KEY,JSON.stringify(registros));
   renderStages();
 }
@@ -805,8 +853,22 @@ async function fotoEscolhida(input){
   let linhaEtapa='';
   if(achado.dataAtual){
     dataLanc.value=achado.dataAtual;
-    const e=etapaPelaData(achado.dataAtual,'pela conta');
-    linhaEtapa='<br>📅 Leitura atual <b>'+brData(achado.dataAtual)+'</b>'+(e?' → <b>Etapa '+e+'</b>':' (fora do calendário, escolha a etapa)');
+    // A "Próxima leitura" vem do calendário da etapa, mesmo se a leitura atual atrasou.
+    const eAtual=etapaDoDia(achado.dataAtual);
+    const eProx=etapaDoDia(achado.dataProxima);
+    const e=eProx||eAtual;
+    const nota=document.getElementById('etapaNota');
+    if(e){
+      etapaFiltro.value=String(e);
+      nota.className='etapanota'; nota.textContent='📅 pela conta';
+      renderStages();
+    }else{
+      nota.className='etapanota fora'; nota.textContent='📅 escolha a etapa';
+    }
+    linhaEtapa='<br>📅 Leitura atual <b>'+brData(achado.dataAtual)+'</b>'
+      +(achado.dataProxima?' • próxima <b>'+brData(achado.dataProxima)+'</b>':'')
+      +(e?' → <b>Etapa '+e+'</b>':' (fora do calendário, escolha a etapa)')
+      +(eProx&&eAtual!==eProx?'<br>⏰ A leitura foi feita fora do dia da etapa; usei a etapa da próxima leitura.':'');
   }
 
   const partes=[];
@@ -882,7 +944,24 @@ function extrairDaConta(textos){
   add(codigo); add(med.valor);
   (tudo.toUpperCase().match(/\b[A-Z]?\d{7,9}\b/g)||[]).forEach(n=>add(n.replace(/\s/g,'')));
   (tudo.replace(/,/g,'.').match(/\d{1,3}(?:\.\d{3}){2,4}\s?-\s?\d{1,2}/g)||[]).forEach(n=>add(n.replace(/\s/g,'')));
-  return {codigo,medidor:med.valor,letraPosta:med.letraPosta,ant,atu,dataAtual:acharDataAtual([textos.meio,textos.topo,textos.extra].join('\n')),cands:cands.slice(0,10)};
+  return {codigo,medidor:med.valor,letraPosta:med.letraPosta,ant,atu,dataAtual:acharDataAtual([textos.meio,textos.topo,textos.extra].join('\n')),
+    dataProxima:acharDataProxima([textos.meio,textos.extra,textos.topo].join('\n'),acharDataAtual([textos.meio,textos.topo,textos.extra].join('\n'))),cands:cands.slice(0,10)};
+}
+// Próxima leitura: data com ano de 4 dígitos na MESMA linha, depois da Leitura atual,
+// entre 15 e 50 dias depois dela (assim não confunde com vencimento nem emissão)
+function acharDataProxima(texto,atual){
+  if(!atual) return '';
+  const p=atual.split('-'); const curta=p[2]+'/'+p[1]+'/'+p[0].slice(2);
+  const base=new Date(p[0],p[1]-1,p[2]);
+  for(const linha of String(texto).split(/\n+/)){
+    const i=linha.indexOf(curta); if(i<0) continue;
+    const m=linha.slice(i+curta.length).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if(!m) continue;
+    const d=new Date(m[3],m[2]-1,m[1]);
+    const dias=(d-base)/864e5;
+    if(dias>=15&&dias<=50) return m[3]+'-'+m[2]+'-'+m[1];
+  }
+  return '';
 }
 // "DATAS DE LEITURAS  14/09/26  13/10/26  29  11/11/2026" -> a 2ª data (dd/mm/aa) é a Leitura atual
 function acharDataAtual(texto){
@@ -949,7 +1028,29 @@ function exportarCSV(){
 }
 if(etapaFiltro) etapaFiltro.value='1';
 etapaPelaData(dataLanc.value);
+// limpeza: fotos de leituras que já estão lançadas
+(function(){let mudou=false;registros.forEach(r=>{if(estaLancado(r)&&r.foto){descartarFotoSeLancada(r);mudou=true}});
+  if(mudou) localStorage.setItem(KEY,JSON.stringify(registros));})();
 renderStages();
+
+/* v2.0: se o app ficou aberto de um dia pro outro (no fundo do iPhone),
+   ao voltar pra ele a data e a etapa passam para o dia de hoje */
+let diaAberto=hojeISO();
+function conferirVirada(){
+  const hoje=hojeISO();
+  if(hoje===diaAberto) return;
+  const estavaNoDiaAntigo=(dataLanc.value===diaAberto||!dataLanc.value);
+  diaAberto=hoje;
+  if(estavaNoDiaAntigo&&editandoId===null){
+    dataLanc.value=hoje;
+    const [a,m]=hoje.split('-').map(Number); anoVisto=a; mesVisto=m-1; diaSel=null;
+    etapaPelaData(hoje);
+    renderStages();
+  }
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)conferirVirada()});
+window.addEventListener('focus',conferirVirada);
+window.addEventListener('pageshow',conferirVirada);
 </script>
 
 <script id="shareAppScript">
