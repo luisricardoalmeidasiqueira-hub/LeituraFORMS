@@ -98,8 +98,9 @@ input.auto{background:#eaf7f0;border-color:var(--green2)}
 .recorte small{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
 .recorte img{width:100%;border-radius:8px;border:1px solid var(--border);display:block}
 .refconta{font-size:12px;font-weight:700;color:var(--text);background:#fff7e6;border:1px solid #f3d9a4;border-radius:8px;padding:6px 8px;margin-top:6px}
-.filtros{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.filtros button{min-height:32px;font-size:12px;padding:0 10px;border-radius:999px;background:#edf3f0;color:var(--green)}
+.filtros{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.filtros button{min-height:34px;font-size:13px;padding:0 8px;border-radius:999px;background:#edf3f0;color:var(--green);white-space:nowrap}
+.filtros .tudo{grid-column:1 / -1}
 .filtros button.on{background:var(--green2);color:#fff}
 .filtros .tudo{background:#fff3e0;color:#9a5b00;border:1px solid #f3d9a4}
 .st{display:inline-block;margin-top:4px;min-height:24px;max-width:100%;padding:3px 7px;border-radius:10px;font-size:10.5px;font-weight:800;line-height:1.2;white-space:normal;text-align:left}
@@ -263,9 +264,9 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
       <button class="secondary" onclick="limparBusca()">Limpar</button>
     </div>
     <div class="filtros" id="filtrosForms">
-      <button type="button" id="fTodos" class="on" onclick="mudarFiltro('todos')">Todas</button>
-      <button type="button" id="fPend" onclick="mudarFiltro('pend')">⏳ Falta lançar no Forms (<span id="nPend">0</span>)</button>
-      <button type="button" id="fOk" onclick="mudarFiltro('ok')">✅ Já lançadas</button>
+      <button type="button" id="fTodos" class="on" onclick="mudarFiltro('todos')" aria-label="Todas as leituras">Todas</button>
+      <button type="button" id="fPend" onclick="mudarFiltro('pend')" title="Falta lançar no Forms" aria-label="Falta lançar no Forms">⏳ <span id="nPend">0</span></button>
+      <button type="button" id="fOk" onclick="mudarFiltro('ok')" title="Já lançadas no Forms" aria-label="Já lançadas no Forms">✅ <span id="nOk">0</span></button>
       <button type="button" id="fTudoOk" class="tudo" onclick="marcarTodasLancadas()" hidden>✅ Marcar todas como lançadas</button>
     </div>
   </section>
@@ -303,8 +304,9 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
    2.1 = na foto, a etapa vem da "Próxima leitura" da conta (certa mesmo
          quando a leitura foi feita atrasada)
    2.2 = bolinha 🟢 no dia da etapa / 🔴 atrasada (com os dias), toque explica
-   2.3 = foto da conta é apagada quando a leitura vira "Lançado" (não enche o celular) */
-const APP_VERSAO='2.3';
+   2.3 = foto da conta é apagada quando a leitura vira "Lançado" (não enche o celular)
+   2.4 = filtros do Forms compactos numa linha só: Todas · ⏳ · ✅ */
+const APP_VERSAO='2.4';
 const APP_DATA='13/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
@@ -623,6 +625,7 @@ function atualizarResumo(){
   if(label) label.textContent=etapasMes+'/18 com lançamento';
   document.getElementById('hoje').textContent=registros.filter(r=>r.dia===hojeISO()).length;
   document.getElementById('nPend').textContent=registros.filter(r=>!estaLancado(r)).length;
+  document.getElementById('nOk').textContent=registros.filter(r=>estaLancado(r)).length;
 }
 
 /* ===== v1.5: lançado no Forms ou não =====
