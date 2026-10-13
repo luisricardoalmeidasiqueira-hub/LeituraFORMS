@@ -66,6 +66,16 @@ button:disabled{opacity:.7;cursor:wait}
 .calfoot{align-items:flex-start}
 .caletapas{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:0}
 .caletapas .vazio{font-size:11.5px;color:var(--muted);font-weight:700;line-height:30px}
+.calfoot:not(:has(#btnMesInteiro:not([style*="none"]))){display:none}
+.calhead .chip{flex-shrink:0}
+.statbtn{display:block;width:100%;text-align:left;min-height:0;font:inherit;color:inherit;cursor:pointer;border:1.5px solid transparent}
+.statbtn.aberto{border-color:var(--green2)}
+.statbtn .setinha{font-style:normal;display:inline-block;transition:transform .2s;color:var(--green2);font-weight:800;font-size:14px;vertical-align:middle}
+.statbtn b{display:block}
+.stat b span{font-size:inherit;color:inherit}
+.statbtn.aberto .setinha{transform:rotate(180deg)}
+.painelEtapas{margin:-4px 0 12px;padding:10px;border-radius:12px;background:#f7fbf9;border:1px solid var(--border)}
+.st{word-break:normal!important;overflow-wrap:normal!important}
 .etq{min-height:30px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:800;
   background:var(--light);color:var(--green);border:1.5px solid #cfe6da;display:inline-flex;align-items:center;gap:5px}
 .etq b{background:var(--green);color:#fff;border-radius:999px;font-size:10px;padding:0 5px;line-height:15px;min-width:15px;text-align:center}
@@ -240,25 +250,23 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
       <button class="calnav" type="button" onclick="mudarMes(-1)" aria-label="Mês anterior">◀</button>
       <button class="calmes" type="button" onclick="alternarCalendario()" aria-label="Mostrar ou esconder os dias">📅 <span id="calTitulo">—</span> <span class="seta">▼</span></button>
       <button class="calnav" type="button" onclick="mudarMes(1)" aria-label="Próximo mês">▶</button>
+      <button class="chip" type="button" onclick="irHoje()" style="min-height:36px">Hoje</button>
     </div>
     <div class="calcorpo">
       <div class="calgrid" id="calGrid"></div>
     </div>
-    <div class="calfoot">
-      <div class="caletapas" id="calEtapas"></div>
-      <div style="display:flex;gap:6px">
-        <button class="chip" type="button" id="btnMesInteiro" onclick="verMesInteiro()" style="display:none">Mês inteiro</button>
-        <button class="chip" type="button" onclick="irHoje()">Hoje</button>
-      </div>
+    <div class="calfoot" style="justify-content:flex-end">
+      <button class="chip" type="button" id="btnMesInteiro" onclick="verMesInteiro()" style="display:none">Mês inteiro</button>
     </div>
   </section>
 
   <section class="card">
     <div class="stats">
-      <div class="stat"><b id="total">0</b><span>Leituras no mês</span></div>
+      <button type="button" class="stat statbtn" id="btnPainelEtapas" onclick="alternarPainelEtapas()" aria-label="Ver as etapas com leitura no mês"><b><span id="total">0</span> <i class="setinha">▾</i></b><span>Leituras no mês</span></button>
       <div class="stat"><b id="etapasUsadas">0/18</b><span>Etapas no mês</span></div>
       <div class="stat"><b id="hoje">0</b><span>Lançadas hoje</span></div>
     </div>
+    <div class="caletapas painelEtapas" id="calEtapas" hidden></div>
     <div class="toolbar">
       <input id="busca" placeholder="🔎 Pesquisar por C, medidor ou leitura..." oninput="renderStages()">
       <button class="secondary" onclick="limparBusca()">Limpar</button>
@@ -305,8 +313,9 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
          quando a leitura foi feita atrasada)
    2.2 = bolinha 🟢 no dia da etapa / 🔴 atrasada (com os dias), toque explica
    2.3 = foto da conta é apagada quando a leitura vira "Lançado" (não enche o celular)
-   2.4 = filtros do Forms compactos numa linha só: Todas · ⏳ · ✅ */
-const APP_VERSAO='2.4';
+   2.4 = filtros do Forms compactos numa linha só: Todas · ⏳ · ✅
+   2.5 = etapas do mês ficam dentro do botão "Leituras no mês" (toque abre/fecha) */
+const APP_VERSAO='2.5';
 const APP_DATA='13/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
@@ -500,6 +509,14 @@ function irHoje(){
 function verMesInteiro(){diaSel=null;renderStages()}
 function abrirEtapa(e){etapaFiltro.value=String(e);renderStages()}
 const CAL_KEY='leitura_forms_calendario_aberto';
+/* v2.5: etapas do mês dentro do botão "Leituras no mês" */
+const PAINEL_KEY='leitura_forms_painel_etapas';
+function alternarPainelEtapas(forcar){
+  const p=document.getElementById('calEtapas'), b=document.getElementById('btnPainelEtapas');
+  const abrir=typeof forcar==='boolean'?forcar:p.hidden;
+  p.hidden=!abrir; b.classList.toggle('aberto',abrir);
+  try{localStorage.setItem(PAINEL_KEY,abrir?'1':'0')}catch(_){}
+}
 function alternarCalendario(){
   const c=document.getElementById('calCard');
   c.classList.toggle('aberto');
@@ -1034,6 +1051,7 @@ etapaPelaData(dataLanc.value);
 // limpeza: fotos de leituras que já estão lançadas
 (function(){let mudou=false;registros.forEach(r=>{if(estaLancado(r)&&r.foto){descartarFotoSeLancada(r);mudou=true}});
   if(mudou) localStorage.setItem(KEY,JSON.stringify(registros));})();
+try{ if(localStorage.getItem(PAINEL_KEY)==='1') alternarPainelEtapas(true); }catch(_){}
 renderStages();
 
 /* v2.0: se o app ficou aberto de um dia pro outro (no fundo do iPhone),
