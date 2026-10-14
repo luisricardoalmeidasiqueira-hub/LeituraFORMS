@@ -24,6 +24,20 @@ header{background:linear-gradient(135deg,var(--green),#0a8150);color:white;
 .logo{display:flex;align-items:center;gap:8px}.sun{font-size:22px}.brand{font-size:18px;font-weight:800;letter-spacing:.3px}
 .subtitle{font-size:11px;opacity:.9;margin-top:1px}
 .count{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:5px 9px;border-radius:10px;text-align:center;font-size:10px}
+/* v2.6: botões só com símbolos, numa linha */
+.actions.icones{grid-template-columns:repeat(5,1fr)!important}
+.actions.icones button{font-size:22px;min-height:48px;padding:0;grid-column:auto!important}
+.actions.icones button.salvando{font-size:14px}
+/* v2.6: "no mês" do topo vira botão que abre as etapas */
+header{position:sticky}
+button.count{color:#fff;font-weight:700;min-height:0;cursor:pointer}
+button.count .setinha{font-style:normal;display:inline-block;transition:transform .2s;font-size:11px}
+button.count.aberto{background:rgba(255,255,255,.3)}
+button.count.aberto .setinha{transform:rotate(180deg)}
+.painelTopo{position:absolute;left:12px;right:12px;top:calc(100% + 6px);max-width:1026px;margin:auto;background:#fff;color:var(--text);
+  border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:12px}
+.painelTopo .titulo{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px}
+.pendDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ed9700;margin-left:4px;vertical-align:middle}
 .count b{display:block;font-size:15px}
 main{max-width:1050px;margin:auto;padding:12px 12px 8px}
 .card{background:white;border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
@@ -150,7 +164,7 @@ tr td:first-child{position:relative}
 .deleteHead,.deleteCell{display:table-cell;text-align:center}
 .deleteHead{width:44px}.deleteCell{width:44px;padding:5px}
 .del{position:static;transform:none;min-width:32px;width:32px;height:30px;padding:0;border-radius:8px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}
-.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .stat{background:var(--light);border-radius:14px;padding:10px 12px}.stat b{font-size:20px;display:block;color:var(--green)}.stat span{font-size:11px;color:var(--muted)}
 footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(safe-area-inset-bottom,0px) + 20px)}
 @media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.campoData{grid-column:1 / -1}}
@@ -192,7 +206,11 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
 <header>
   <div class="headerline">
     <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras • <span class="appVersao"></span></div></div></div>
-    <div class="count"><b id="totalTop">0</b>no mês</div>
+    <button type="button" class="count" id="btnTopo" onclick="alternarPainelEtapas()" aria-label="Ver as etapas com leitura no mês"><b><span id="totalTop">0</span> <i class="setinha">▾</i></b>no mês</button>
+  </div>
+  <div class="painelTopo" id="painelTopo" hidden>
+    <div class="titulo" id="painelTitulo">Etapas com leitura no mês</div>
+    <div class="caletapas" id="calEtapas"></div>
   </div>
 </header>
 
@@ -235,12 +253,12 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
         <button type="button" id="optOk" class="ok" onclick="escolherForms(true)">✅ Já lancei</button>
       </div>
     </div>
-    <div class="actions">
-      <button class="primary" id="btnSalvar" onclick="salvarLeitura()">💾 Salvar</button>
-      <button class="blue" onclick="exportarCSV()">⬇️ Exportar</button>
-      <button class="orange" onclick="window.print()">🖨️ Imprimir</button>
-      <button class="primary" id="btnCompartilharApp" type="button" aria-label="Compartilhar aplicativo">↗️ Compartilhar</button>
-      <button class="gray" id="btnAtualizarApp" type="button" aria-label="Atualizar aplicativo">🔄 Atualizar app</button>
+    <div class="actions icones">
+      <button class="primary" id="btnSalvar" onclick="salvarLeitura()" title="Salvar" aria-label="Salvar">💾</button>
+      <button class="blue" onclick="exportarCSV()" title="Exportar planilha" aria-label="Exportar planilha">⬇️</button>
+      <button class="orange" onclick="window.print()" title="Imprimir" aria-label="Imprimir">🖨️</button>
+      <button class="primary" id="btnCompartilharApp" type="button" title="Compartilhar aplicativo" aria-label="Compartilhar aplicativo">↗️</button>
+      <button class="gray" id="btnAtualizarApp" type="button" title="Atualizar aplicativo" aria-label="Atualizar aplicativo">🔄</button>
     </div>
     <div id="msg" class="message"></div>
   </section>
@@ -262,19 +280,18 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
 
   <section class="card">
     <div class="stats">
-      <button type="button" class="stat statbtn" id="btnPainelEtapas" onclick="alternarPainelEtapas()" aria-label="Ver as etapas com leitura no mês"><b><span id="total">0</span> <i class="setinha">▾</i></b><span>Leituras no mês</span></button>
       <div class="stat"><b id="etapasUsadas">0/18</b><span>Etapas no mês</span></div>
       <div class="stat"><b id="hoje">0</b><span>Lançadas hoje</span></div>
     </div>
-    <div class="caletapas painelEtapas" id="calEtapas" hidden></div>
+
     <div class="toolbar">
       <input id="busca" placeholder="🔎 Pesquisar por C, medidor ou leitura..." oninput="renderStages()">
       <button class="secondary" onclick="limparBusca()">Limpar</button>
     </div>
     <div class="filtros" id="filtrosForms">
       <button type="button" id="fTodos" class="on" onclick="mudarFiltro('todos')" aria-label="Todas as leituras">Todas</button>
-      <button type="button" id="fPend" onclick="mudarFiltro('pend')" title="Falta lançar no Forms" aria-label="Falta lançar no Forms">⏳ <span id="nPend">0</span></button>
-      <button type="button" id="fOk" onclick="mudarFiltro('ok')" title="Já lançadas no Forms" aria-label="Já lançadas no Forms">✅ <span id="nOk">0</span></button>
+      <button type="button" id="fPend" onclick="mudarFiltro('pend')" title="Falta lançar no Forms" aria-label="Falta lançar no Forms">⏳<span id="nPend" class="pendDot" hidden></span></button>
+      <button type="button" id="fOk" onclick="mudarFiltro('ok')" title="Já lançadas no Forms" aria-label="Já lançadas no Forms">✅</button>
       <button type="button" id="fTudoOk" class="tudo" onclick="marcarTodasLancadas()" hidden>✅ Marcar todas como lançadas</button>
     </div>
   </section>
@@ -314,9 +331,11 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
    2.2 = bolinha 🟢 no dia da etapa / 🔴 atrasada (com os dias), toque explica
    2.3 = foto da conta é apagada quando a leitura vira "Lançado" (não enche o celular)
    2.4 = filtros do Forms compactos numa linha só: Todas · ⏳ · ✅
-   2.5 = etapas do mês ficam dentro do botão "Leituras no mês" (toque abre/fecha) */
-const APP_VERSAO='2.5';
-const APP_DATA='13/10/2026';
+   2.5 = etapas do mês ficam dentro do botão "Leituras no mês" (toque abre/fecha)
+   2.6 = botões só com símbolos numa linha; etapas do mês abrem no "no mês" do
+         topo (saiu o repetido de baixo); ⏳ com bolinha laranja em vez de número */
+const APP_VERSAO='2.6';
+const APP_DATA='14/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
 
@@ -507,16 +526,27 @@ function irHoje(){
   renderStages();
 }
 function verMesInteiro(){diaSel=null;renderStages()}
-function abrirEtapa(e){etapaFiltro.value=String(e);renderStages()}
+function abrirEtapa(e){
+  etapaFiltro.value=String(e);
+  if(typeof filtroForms!=='undefined'&&filtroForms==='pend') mudarFiltro('todos'); else renderStages();
+  alternarPainelEtapas(false);
+  const alvo=document.getElementById('stagesContainer');
+  if(alvo) alvo.closest('.card').scrollIntoView({behavior:'smooth',block:'start'});
+}
 const CAL_KEY='leitura_forms_calendario_aberto';
 /* v2.5: etapas do mês dentro do botão "Leituras no mês" */
 const PAINEL_KEY='leitura_forms_painel_etapas';
 function alternarPainelEtapas(forcar){
-  const p=document.getElementById('calEtapas'), b=document.getElementById('btnPainelEtapas');
+  const p=document.getElementById('painelTopo'), b=document.getElementById('btnTopo');
   const abrir=typeof forcar==='boolean'?forcar:p.hidden;
   p.hidden=!abrir; b.classList.toggle('aberto',abrir);
-  try{localStorage.setItem(PAINEL_KEY,abrir?'1':'0')}catch(_){}
 }
+// fecha o painel ao tocar fora dele
+document.addEventListener('click',e=>{
+  const p=document.getElementById('painelTopo');
+  if(p&&!p.hidden&&!e.target.closest('#painelTopo')&&!e.target.closest('#btnTopo')) alternarPainelEtapas(false);
+});
+
 function alternarCalendario(){
   const c=document.getElementById('calCard');
   c.classList.toggle('aberto');
@@ -560,6 +590,7 @@ function renderCalendario(){
   registrosDoPeriodo().forEach(r=>{const e=Number(r.etapa);porEtapa[e]=(porEtapa[e]||0)+1});
   const etapas=Object.keys(porEtapa).map(Number).sort((a,b)=>a-b);
   const boxEt=document.getElementById('calEtapas');
+  const pt=document.getElementById('painelTitulo'); if(pt) pt.textContent='Etapas com leitura em '+nomePeriodo();
   if(!etapas.length){
     boxEt.innerHTML=`<span class="vazio">Sem lançamentos ${diaSel?'neste dia':'neste mês'}</span>`;
   }else{
@@ -634,15 +665,14 @@ function renderStages(){
 function atualizarResumo(){
   const doMes=registros.filter(r=>String(r.dia||'').startsWith(prefixoMes()));
   const etapasMes=new Set(doMes.map(r=>Number(r.etapa))).size;
-  document.getElementById('total').textContent=doMes.length;
+  const tot=document.getElementById('total'); if(tot) tot.textContent=doMes.length;
   const topo=document.getElementById('totalTop');
   if(topo) topo.textContent=doMes.length;
   document.getElementById('etapasUsadas').textContent=etapasMes+'/18';
   const label=document.getElementById('etapasUsadasLabel');
   if(label) label.textContent=etapasMes+'/18 com lançamento';
   document.getElementById('hoje').textContent=registros.filter(r=>r.dia===hojeISO()).length;
-  document.getElementById('nPend').textContent=registros.filter(r=>!estaLancado(r)).length;
-  document.getElementById('nOk').textContent=registros.filter(r=>estaLancado(r)).length;
+  document.getElementById('nPend').hidden=!registros.some(r=>!estaLancado(r));
 }
 
 /* ===== v1.5: lançado no Forms ou não =====
@@ -703,7 +733,7 @@ function editar(id){
   document.getElementById('formTitulo').textContent='✏️ Editar leitura';
   document.getElementById('editTexto').textContent='✏️ Editando C '+(r.codigo||'')+' • Etapa '+(r.etapa||'');
   document.getElementById('editAviso').hidden=false;
-  document.getElementById('btnSalvar').textContent='💾 Salvar alteração';
+  document.getElementById('btnSalvar').textContent='💾✏️';
   document.querySelector('.formcard').classList.add('editando');
   document.querySelector('.formcard').scrollIntoView({behavior:'smooth',block:'start'});
   renderStages();
@@ -715,7 +745,7 @@ function sairDaEdicao(){
   escolherForms(false);
   document.getElementById('formTitulo').textContent='➕ Lançar nova leitura';
   document.getElementById('editAviso').hidden=true;
-  document.getElementById('btnSalvar').textContent='💾 Salvar';
+  document.getElementById('btnSalvar').textContent='💾';
   document.querySelector('.formcard').classList.remove('editando');
 }
 function cancelarEdicao(){
@@ -1051,7 +1081,6 @@ etapaPelaData(dataLanc.value);
 // limpeza: fotos de leituras que já estão lançadas
 (function(){let mudou=false;registros.forEach(r=>{if(estaLancado(r)&&r.foto){descartarFotoSeLancada(r);mudou=true}});
   if(mudou) localStorage.setItem(KEY,JSON.stringify(registros));})();
-try{ if(localStorage.getItem(PAINEL_KEY)==='1') alternarPainelEtapas(true); }catch(_){}
 renderStages();
 
 /* v2.0: se o app ficou aberto de um dia pro outro (no fundo do iPhone),
@@ -1108,7 +1137,7 @@ window.addEventListener('pageshow',conferirVirada);
   // As leituras salvas NÃO são apagadas (ficam no localStorage).
   async function atualizarApp(){
     const b=document.getElementById('btnAtualizarApp');
-    if(b){ b.disabled=true; b.textContent='⏳ Atualizando...'; }
+    if(b){ b.disabled=true; b.textContent='⏳'; }
     try{
       if('serviceWorker' in navigator){
         const regs=await navigator.serviceWorker.getRegistrations();
