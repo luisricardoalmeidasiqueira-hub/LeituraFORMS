@@ -25,12 +25,17 @@ header{background:linear-gradient(135deg,var(--green),#0a8150);color:white;
 .subtitle{font-size:11px;opacity:.9;margin-top:1px}
 .count{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:5px 9px;border-radius:10px;text-align:center;font-size:10px}
 /* v2.6: botões só com símbolos, numa linha */
-.actions.icones{grid-template-columns:repeat(5,1fr)!important}
+.actions.icones{grid-template-columns:repeat(4,1fr)!important}
 .actions.icones button{font-size:22px;min-height:48px;padding:0;grid-column:auto!important}
 .actions.icones button.salvando{font-size:14px}
 /* v2.6: "no mês" do topo vira botão que abre as etapas */
 header{position:sticky}
 button.count{color:#fff;font-weight:700;min-height:0;cursor:pointer}
+.topoDir{display:flex;align-items:stretch;gap:6px;flex-shrink:0}
+.btnAtualizarTopo{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;
+  min-height:0;padding:5px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:10px;font-weight:700}
+.btnAtualizarTopo .ic{font-size:17px;line-height:1}
+.logo{min-width:0}
 button.count .setinha{font-style:normal;display:inline-block;transition:transform .2s;font-size:11px}
 button.count.aberto{background:rgba(255,255,255,.3)}
 button.count.aberto .setinha{transform:rotate(180deg)}
@@ -206,7 +211,10 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
 <header>
   <div class="headerline">
     <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras • <span class="appVersao"></span></div></div></div>
+    <div class="topoDir">
+    <button type="button" class="btnAtualizarTopo" id="btnAtualizarApp" title="Atualizar aplicativo" aria-label="Atualizar aplicativo"><span class="ic">🔄</span><span class="appVersao"></span></button>
     <button type="button" class="count" id="btnTopo" onclick="alternarPainelEtapas()" aria-label="Ver as etapas com leitura no mês"><b><span id="totalTop">0</span> <i class="setinha">▾</i></b>no mês</button>
+    </div>
   </div>
   <div class="painelTopo" id="painelTopo" hidden>
     <div class="titulo" id="painelTitulo">Etapas com leitura no mês</div>
@@ -258,7 +266,6 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
       <button class="blue" onclick="exportarCSV()" title="Exportar planilha" aria-label="Exportar planilha">⬇️</button>
       <button class="orange" onclick="window.print()" title="Imprimir" aria-label="Imprimir">🖨️</button>
       <button class="primary" id="btnCompartilharApp" type="button" title="Compartilhar aplicativo" aria-label="Compartilhar aplicativo">↗️</button>
-      <button class="gray" id="btnAtualizarApp" type="button" title="Atualizar aplicativo" aria-label="Atualizar aplicativo">🔄</button>
     </div>
     <div id="msg" class="message"></div>
   </section>
@@ -333,8 +340,9 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
    2.4 = filtros do Forms compactos numa linha só: Todas · ⏳ · ✅
    2.5 = etapas do mês ficam dentro do botão "Leituras no mês" (toque abre/fecha)
    2.6 = botões só com símbolos numa linha; etapas do mês abrem no "no mês" do
-         topo (saiu o repetido de baixo); ⏳ com bolinha laranja em vez de número */
-const APP_VERSAO='2.6';
+         topo (saiu o repetido de baixo); ⏳ com bolinha laranja em vez de número
+   2.7 = 🔄 Atualizar no topo, junto da versão (versão em cima e no rodapé) */
+const APP_VERSAO='2.7';
 const APP_DATA='14/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
@@ -1137,7 +1145,7 @@ window.addEventListener('pageshow',conferirVirada);
   // As leituras salvas NÃO são apagadas (ficam no localStorage).
   async function atualizarApp(){
     const b=document.getElementById('btnAtualizarApp');
-    if(b){ b.disabled=true; b.textContent='⏳'; }
+    if(b){ b.disabled=true; const ic=b.querySelector('.ic'); if(ic) ic.textContent='⏳'; else b.textContent='⏳'; }
     try{
       if('serviceWorker' in navigator){
         const regs=await navigator.serviceWorker.getRegistrations();
