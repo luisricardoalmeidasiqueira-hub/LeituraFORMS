@@ -26,7 +26,7 @@ header{background:linear-gradient(135deg,var(--green),#0a8150);color:white;
 .count{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:5px 9px;border-radius:10px;text-align:center;font-size:10px}
 /* v2.6: botões só com símbolos, numa linha */
 .actions.icones{grid-template-columns:repeat(4,1fr)!important}
-.actions.icones button{font-size:22px;min-height:48px;padding:0;grid-column:auto!important}
+.actions.icones button{font-size:16px;min-height:38px;padding:0;grid-column:auto!important}
 .actions.icones button.salvando{font-size:14px}
 /* v2.6: "no mês" do topo vira botão que abre as etapas */
 header{position:sticky}
@@ -34,7 +34,7 @@ button.count{color:#fff;font-weight:700;min-height:0;cursor:pointer}
 .topoDir{display:flex;align-items:stretch;gap:6px;flex-shrink:0}
 .btnAtualizarTopo{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;
   min-height:0;padding:5px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:10px;font-weight:700}
-.btnAtualizarTopo .ic{font-size:17px;line-height:1}
+.btnAtualizarTopo .ic{font-size:14px;line-height:1}
 .logo{min-width:0}
 button.count .setinha{font-style:normal;display:inline-block;transition:transform .2s;font-size:11px}
 button.count.aberto{background:rgba(255,255,255,.3)}
@@ -149,7 +149,7 @@ input.auto{background:#eaf7f0;border-color:var(--green2)}
 @media(max-width:430px){.edit{width:28px;min-width:28px;height:28px;min-height:28px;font-size:14px}}
 @media print{.edit,.editaviso{display:none!important}}
 .formsopc .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.formsopc .seg button{min-height:42px;font-size:13px;background:#f4f7f6;color:var(--muted);border:2px solid #dce6e1}
+.formsopc .seg button{min-height:36px;font-size:15px;background:#f4f7f6;color:var(--muted);border:2px solid #dce6e1}
 .formsopc .seg button.on.pend{background:#fff3e0;color:#9a5b00;border-color:#ed9700}
 .formsopc .seg button.on.ok{background:#e7f6ec;color:#0b7a4b;border-color:#0b7a4b}
 .etapanota.fora{color:#9a5b00}
@@ -255,10 +255,10 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
       <div class="campoData"><label>Data da leitura <span class="req">*</span></label><input id="dataLanc" type="date" aria-label="Data da leitura" onchange="etapaPelaData(this.value)" oninput="etapaPelaData(this.value)"></div>
     </div>
     <div class="formsopc">
-      <label>Lançou no Forms para arrumar?</label>
+      <label>Lançou no Forms para arrumar? <span class="etapanota" style="color:var(--muted)">⏳ falta • ✅ já lancei</span></label>
       <div class="seg">
-        <button type="button" id="optPend" class="pend on" onclick="escolherForms(false)">⏳ Falta lançar</button>
-        <button type="button" id="optOk" class="ok" onclick="escolherForms(true)">✅ Já lancei</button>
+        <button type="button" id="optPend" class="pend on" onclick="escolherForms(false)" title="Falta lançar" aria-label="Falta lançar">⏳</button>
+        <button type="button" id="optOk" class="ok" onclick="escolherForms(true)" title="Já lancei" aria-label="Já lancei">✅</button>
       </div>
     </div>
     <div class="actions icones">
@@ -341,8 +341,9 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
    2.5 = etapas do mês ficam dentro do botão "Leituras no mês" (toque abre/fecha)
    2.6 = botões só com símbolos numa linha; etapas do mês abrem no "no mês" do
          topo (saiu o repetido de baixo); ⏳ com bolinha laranja em vez de número
-   2.7 = 🔄 Atualizar no topo, junto da versão (versão em cima e no rodapé) */
-const APP_VERSAO='2.7';
+   2.7 = 🔄 Atualizar no topo, junto da versão (versão em cima e no rodapé)
+   2.8 = ⏳/✅ do formulário só com símbolos; símbolos dos botões menores */
+const APP_VERSAO='2.8';
 const APP_DATA='14/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
