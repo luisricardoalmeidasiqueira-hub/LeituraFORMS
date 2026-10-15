@@ -108,6 +108,7 @@ button:disabled{opacity:.7;cursor:wait}
 .foto-btn{width:100%;background:#0b5f8a;color:#fff}
 .formtopo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .formtopo h2{margin:0}
+.foto-btn.icone.limpar{background:#feeceb;color:#b42318;border:1px solid #f5c9c5}
 .foto-btn.icone{width:52px;min-width:52px;min-height:38px;padding:0;font-size:18px;flex-shrink:0}
 .fotobox{margin-bottom:0}
 .fotobox:has(#fotoArea:not([hidden])),.fotobox:has(#recorteBox:not([hidden])){margin-bottom:12px}
@@ -272,7 +273,10 @@ input[type=date]{line-height:40px}
   <section class="card formcard">
     <div class="formtopo">
       <h2 id="formTitulo">➕ Lançar nova leitura</h2>
-      <button type="button" class="foto-btn icone" onclick="document.getElementById('fotoInput').click()" title="Foto da conta (preenche sozinho)" aria-label="Foto da conta (preenche sozinho)">📷</button>
+      <span style="display:flex;gap:6px">
+        <button type="button" class="foto-btn icone limpar" onclick="limparFormulario()" title="Limpar tudo" aria-label="Limpar tudo">🗑️</button>
+        <button type="button" class="foto-btn icone" onclick="document.getElementById('fotoInput').click()" title="Foto da conta (preenche sozinho)" aria-label="Foto da conta (preenche sozinho)">📷</button>
+      </span>
     </div>
     <div class="editaviso" id="editAviso" hidden><span id="editTexto">✏️ Editando leitura</span><button type="button" onclick="cancelarEdicao()">✖ Cancelar</button></div>
     <div class="fotobox">
@@ -413,8 +417,9 @@ input[type=date]{line-height:40px}
          número e o app lê só aquele pedaço de perto
    3.7 = 🤖 leitura por IA (Gemini grátis, chave só no celular): preenche
          código, medidor, data, etapa e a leitura da caneta
-   3.8 = testa a chave da IA na hora de colar (✅ funcionando / ❌ recusada) */
-const APP_VERSAO='3.8';
+   3.8 = testa a chave da IA na hora de colar (✅ funcionando / ❌ recusada)
+   3.9 = 🗑️ ao lado do 📷 limpa tudo do formulário (campos, foto, avisos) */
+const APP_VERSAO='3.9';
 
 const APP_DATA='15/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
@@ -1201,6 +1206,18 @@ async function lerNoToque(e,el){
   // se achou o medidor, a dica fica só com a data se ainda faltar
   const faltaData=!dataLanc.value||document.getElementById('etapaNota').textContent.indexOf('pela conta')<0;
   document.getElementById('recorteDica').innerHTML=med.valor&&!faltaData?'✅ Pronto. Toque de novo na foto se precisar ler outra parte.':'👆 <b>Toque na foto</b> em outra parte que faltou.';
+}
+/* v3.9: 🗑️ limpa o formulário (campos, foto e mensagens) */
+function limparFormulario(){
+  if(editandoId!==null){ cancelarEdicao(); }
+  ['codigo','medidor','leitura'].forEach(i=>document.getElementById(i).value='');
+  tirarFoto();
+  const ref=document.getElementById('refConta'); if(ref){ref.hidden=true;ref.innerHTML='';}
+  fotoStatus('');
+  escolherForms(false);
+  dataLanc.value=hojeISO(); etapaPelaData(dataLanc.value);
+  const msg=document.getElementById('msg'); msg.textContent='🗑️ Formulário limpo.';
+  setTimeout(()=>{ if(msg.textContent==='🗑️ Formulário limpo.') msg.textContent=''; },1800);
 }
 function trocarLetraMedidor(l){
   const el=document.getElementById('medidor');
