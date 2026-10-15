@@ -389,9 +389,15 @@ input[type=date]{line-height:40px}
    2.8 = ⏳/✅ do formulário só com símbolos; símbolos dos botões menores
    2.9 = câmera só com o ícone 📷, na linha do título
    3.0 = tela em pílulas: calendário em barrinha, números em pílulas, pesquisa,
-         filtros e campos mais baixos e arredondados */
-const APP_VERSAO='3.0';
-const APP_DATA='14/10/2026';
+         filtros e campos mais baixos e arredondados
+   3.1 = foto: medidor procurado na linha do kWh (não confunde com débito em
+         conta), lê conta comprida, botões B/M/A/N para a letra do medidor
+   3.2 = M/N/H/W no medidor sempre pedem confirmação (o leitor troca M por N)
+   3.3 = só os prefixos reais de medidor: M, B, 3T, 3G, AR, BG, AG
+         (N lido vira M; 8/P/R vira B); botões com esses prefixos */
+const APP_VERSAO='3.3';
+
+const APP_DATA='15/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
 
@@ -927,7 +933,7 @@ async function fotoEscolhida(input){
     if(m.status==='recognizing text') fotoStatus('🔎 Lendo '+etapaLeitura+'... '+Math.round((m.progress||0)*100)+'%');
     else fotoStatus('⏳ Preparando o leitor... (só demora na 1ª vez)');
   };
-  const textos={topo:'',meio:'',extra:'',baixo:'',baixo2:''};
+  const textos={topo:'',meio:'',extra:'',baixo:'',baixoL:'',baixo2:''};
   try{
     const w=await pegarLeitor();
     // 1) topo da conta: Número da Unidade Consumidora
@@ -944,7 +950,9 @@ async function fotoEscolhida(input){
     // 2) parte de baixo: Medidor e leituras impressas
     etapaLeitura='o medidor';
     textos.baixo=(await w.recognize(recortar(img,0.78,1,2000,'contraste'))).data.text||'';
-    if(!acharMedidor(textos.baixo).valor){
+    // v3.1: faixa maior (conta comprida, com aviso e código de barras embaixo)
+    textos.baixoL=(await w.recognize(recortar(img,0.55,1,2000,'contraste'))).data.text||'';
+    if(!acharMedidor(textos.baixo+'\n'+textos.baixoL).seguro){
       textos.baixo2=(await w.recognize(recortar(img,0.66,1,2000,'limiar'))).data.text||'';
     }
   }catch(e){
@@ -981,7 +989,8 @@ async function fotoEscolhida(input){
   partes.push(achado.codigo?'C: <b>'+esc(achado.codigo)+'</b>':'C: não achei');
   partes.push(achado.medidor?'Medidor: <b>'+esc(achado.medidor)+'</b>':'medidor: não achei');
   let aviso='';
-  if(achado.letraPosta) aviso='<br>⚠️ A letra <b>'+esc(achado.letraPosta)+'</b> do medidor foi colocada igual à do último medidor salvo. Confira.';
+  if(achado.letraPosta) aviso='<br>⚠️ Confira o prefixo do medidor (coloquei <b>'+esc(achado.letraPosta)+'</b>). Toque no certo: '
+    +PREFIXOS.map(l=>`<button type="button" class="cand" style="min-height:26px;padding:0 9px" onclick="trocarLetraMedidor('${l}')">${l}</button>`).join(' ');
   fotoStatus('✅ '+partes.join(' • ')+linhaEtapa+aviso+'<br>Confira e digite a leitura correta (a da caneta).'+(achado.cands.length?' Se algum número saiu errado, toque no certo:':''));
 
   const ref=document.getElementById('refConta');
@@ -996,6 +1005,11 @@ async function fotoEscolhida(input){
     `<button type="button" class="cand" onclick="usarCand('${esc(n)}')">${esc(n)}</button>`).join('');
   document.getElementById('leitura').focus({preventScroll:true});
 }
+function trocarLetraMedidor(l){
+  const el=document.getElementById('medidor');
+  const dig=String(el.value).toUpperCase().replace(/^(3[TG]|[A-Z]{1,2})(?=\d)/,'');
+  marcarAuto('medidor',l+dig);
+}
 function usarCand(n){
   marcarAuto(alvoFoto,n);
   if(alvoFoto==='codigo') mudarAlvo('medidor');
@@ -1007,7 +1021,7 @@ function usarCand(n){
    Testado nas fotos reais de 13/10/2026. */
 const LETRA_KEY='leitura_forms_letra_medidor';
 function lembrarLetraMedidor(m){
-  const x=String(m).toUpperCase().match(/^([A-Z])\d{7,9}$/);
+  const x=String(m).toUpperCase().match(/^(3[TG]|[A-Z]{1,2})\d{7,9}$/);
   if(x){try{localStorage.setItem(LETRA_KEY,x[1])}catch(_){}}
 }
 function acharUC(texto){
@@ -1015,32 +1029,61 @@ function acharUC(texto){
   const m=t.match(/\d{1,3}(?:\.\d{3}){2,4}-\d{1,2}/);
   return m?m[0]:'';
 }
-function acharMedidor(texto){
-  const t=String(texto).toUpperCase().replace(/[|\[\]]/g,' ');
-  // letra + 8 números (o normal)
-  let letraSalva='B'; try{letraSalva=localStorage.getItem(LETRA_KEY)||'B'}catch(_){}
-  let m=t.match(/\b([A-Z])\s?(\d{8})\b/);
-  if(m){
-    // P, R, D, E, F costumam ser o "B" lido errado: usa a letra do último medidor salvo
-    if(/[PRDEF]/.test(m[1]) && m[1]!==letraSalva) return {valor:letraSalva+m[2],letraPosta:letraSalva};
-    return {valor:m[1]+m[2],letraPosta:''};
+// v3.3: prefixos de medidor que existem (Elektro Tatuí)
+const PREFIXOS=['M','B','3T','3G','AR','BG','AG'];
+// Corrige o prefixo lido errado. certo=false -> mostra os botões pra confirmar
+function normPrefixo(p){
+  p=String(p||'').toUpperCase();
+  if(PREFIXOS.includes(p)) return {p,certo:true};
+  const um={N:'M',H:'M',W:'M',P:'B',R:'B',D:'B',E:'B',F:'B','8':'B','6':'B'};
+  if(p.length===1&&um[p]) return {p:um[p],certo:/[NHW]/.test(p)};   // N não existe -> é M
+  if(p.length===2){
+    const fix=p.replace(/^[S5$]/,'3').replace(/^8/,'B').replace(/[6C0O]$/,'G').replace(/[7I1]$/,'T').replace(/[P]$/,'R');
+    if(PREFIXOS.includes(fix)) return {p:fix,certo:false};
+    const perto=PREFIXOS.filter(x=>x.length===2&&((x[0]===p[0])+(x[1]===p[1]))===1);
+    if(perto.length===1) return {p:perto[0],certo:false};
   }
-  // "B" lido como "8": 9 números começando com 8
-  m=t.match(/\b8(\d{8})\b/);
-  if(m) return {valor:'B'+m[1],letraPosta:''};
-  // só os 8 números: põe a letra do último medidor salvo
-  m=t.match(/\b(\d{8})\b/);
-  if(m) return {valor:letraSalva+m[1],letraPosta:letraSalva};
-  return {valor:'',letraPosta:''};
+  return null;
 }
+function acharMedidor(texto){
+  let salvo='B'; try{salvo=localStorage.getItem(LETRA_KEY)||'B'}catch(_){}
+  let melhor=null;
+  String(texto).split(/\n+/).forEach(linha=>{
+    let pts=0;
+    if(/k\s?[wv]?\s?h|kidh|kwh/i.test(linha)) pts+=3;          // linha do medidor tem "kWh"
+    if(/\b1[.,]00\b/.test(linha)) pts+=2;                         // constante do medidor
+    if(/d[eé]bito|conta|cep|nota|fiscal|chave|protocolo|c[oó]digo|cpf|vencimento/i.test(linha)) pts-=6;
+    const re=/(?:^|[^0-9A-Za-z])((?:3[A-Za-z]|[A-Za-z$]{1,2})?)[\s|]?(\d{7,9})(?!\d)/g; let m;
+    while((m=re.exec(linha))){
+      let pre=m[1]||'', dig=m[2], certo=true, pref='';
+      if(pre){
+        const n=normPrefixo(pre);
+        if(!n) continue;
+        pref=n.p; certo=n.certo;
+        if(pref.length===1&&dig.length!==8) continue;
+      }else{
+        if(dig.length===9){                         // letra lida como número
+          const p1=normPrefixo(dig[0]);
+          if(p1){pref=p1.p;}else if(/[41]/.test(dig[0])){pref='M';}else{pref=salvo;}
+          dig=dig.slice(1); certo=false;
+        }else if(dig.length===8){ pref=salvo; certo=false; }
+        else continue;
+      }
+      const c={valor:pref+dig,letraPosta:certo?'':pref,pts,seguro:pts>=2};
+      if(!melhor||c.pts>melhor.pts) melhor=c;
+    }
+  });
+  return (melhor&&melhor.pts>=0)?melhor:{valor:'',letraPosta:'',pts:-99,seguro:false};
+}
+
 function extrairDaConta(textos){
-  const tudo=[textos.topo,textos.extra||'',textos.baixo,textos.baixo2].join('\n');
+  const tudo=[textos.topo,textos.extra||'',textos.baixo,textos.baixoL||'',textos.baixo2].join('\n');
   const codigo=acharUC(textos.topo)||acharUC(textos.extra||'')||acharUC(tudo);
-  const med=acharMedidor(textos.baixo).valor?acharMedidor(textos.baixo):acharMedidor(textos.baixo2);
+  const med=acharMedidor([textos.baixo,textos.baixoL||'',textos.baixo2].join('\n'));
 
   // Leituras impressas (anterior e atual) — só de referência, a correta é a da caneta
   let ant='',atu='';
-  const baixo=(textos.baixo+'\n'+textos.baixo2);
+  const baixo=(textos.baixo+'\n'+(textos.baixoL||'')+'\n'+textos.baixo2);
   const par=baixo.match(/\b(\d{3,6})\s+(\d{3,6})\s+1[.,]00\b/)||baixo.match(/\b(\d{4,6})\s+(\d{4,6})\b/);
   if(par&&Number(par[2])>=Number(par[1])){ant=par[1];atu=par[2]}
 
