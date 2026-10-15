@@ -205,6 +205,10 @@ footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(saf
 .stagefilter select{height:44px;width:100%;border:1px solid #cfdcd6;border-radius:10px;background:#edf7f2;color:var(--green);font-size:16px;font-weight:800;padding:0 12px}
 .stagefilter select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(11,122,75,.1)}
 
+/* ===== v3.4: lista só abre quando chamada ===== */
+.fecharLista{min-height:28px;width:28px;padding:0;border-radius:999px;background:#edf3f0;color:var(--green);font-size:12px}
+body.listaFechada .filtros button.on{background:#edf3f0;color:var(--green)}
+@media print{#cardLista{display:block!important}.fecharLista{display:none!important}}
 /* ===== v3.0: tela em pílulas (mais compacta) ===== */
 .calday .qtd{top:3px!important;right:3px!important;min-width:0!important;width:7px;height:7px;padding:0!important;line-height:0!important;font-size:0!important;border-radius:50%}
 .message:empty{display:none}
@@ -336,7 +340,7 @@ input[type=date]{line-height:40px}
     </div>
 
     <div class="toolbar">
-      <input id="busca" placeholder="🔎 Pesquisar por C, medidor ou leitura..." oninput="renderStages()">
+      <input id="busca" placeholder="🔎 Pesquisar por C, medidor ou leitura..." oninput="renderStages();if(this.value.trim())abrirLista(false)">
       <button class="secondary" onclick="limparBusca()">Limpar</button>
     </div>
     <div class="filtros" id="filtrosForms">
@@ -347,11 +351,14 @@ input[type=date]{line-height:40px}
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="cardLista" hidden>
     <div class="printtitle" id="printTitle"></div>
     <div class="stage-title">
       <h2>📍 Leituras por etapa</h2>
-      <span class="badge" id="etapasUsadasLabel">0/18 com lançamento</span>
+      <span style="display:flex;gap:6px;align-items:center">
+        <span class="badge" id="etapasUsadasLabel">0/18 com lançamento</span>
+        <button type="button" class="fecharLista" onclick="fecharLista()" title="Fechar lista" aria-label="Fechar lista">✖</button>
+      </span>
     </div>
     <div id="stagesContainer"></div>
   </section>
@@ -394,8 +401,12 @@ input[type=date]{line-height:40px}
          conta), lê conta comprida, botões B/M/A/N para a letra do medidor
    3.2 = M/N/H/W no medidor sempre pedem confirmação (o leitor troca M por N)
    3.3 = só os prefixos reais de medidor: M, B, 3T, 3G, AR, BG, AG
-         (N lido vira M; 8/P/R vira B); botões com esses prefixos */
-const APP_VERSAO='3.3';
+         (N lido vira M; 8/P/R vira B); botões com esses prefixos
+   3.4 = lista de leituras fechada; abre pelo "no mês" do topo, filtros, dia
+         do calendário ou pesquisa; ✖ fecha
+   3.5 = foto de longe: acha a linha do medidor e dá zoom nela; recorte
+         ampliado mostra essa linha + a anotação à caneta */
+const APP_VERSAO='3.5';
 
 const APP_DATA='15/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
@@ -592,8 +603,21 @@ function abrirEtapa(e){
   etapaFiltro.value=String(e);
   if(typeof filtroForms!=='undefined'&&filtroForms==='pend') mudarFiltro('todos'); else renderStages();
   alternarPainelEtapas(false);
-  const alvo=document.getElementById('stagesContainer');
-  if(alvo) alvo.closest('.card').scrollIntoView({behavior:'smooth',block:'start'});
+  abrirLista(true);
+}
+/* v3.4: a lista de leituras fica fechada; abre pelo topo, filtros, dia ou pesquisa */
+let listaAberta=false;
+function aplicarLista(){
+  document.getElementById('cardLista').hidden=!listaAberta;
+  document.body.classList.toggle('listaFechada',!listaAberta);
+}
+function abrirLista(rolar){
+  listaAberta=true; aplicarLista();
+  if(rolar) document.getElementById('cardLista').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function fecharLista(){
+  listaAberta=false; aplicarLista();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 const CAL_KEY='leitura_forms_calendario_aberto';
 /* v2.5: etapas do mês dentro do botão "Leituras no mês" */
@@ -615,7 +639,7 @@ function alternarCalendario(){
   try{localStorage.setItem(CAL_KEY,c.classList.contains('aberto')?'1':'0')}catch(_){}
 }
 try{if(localStorage.getItem(CAL_KEY)==='1') document.getElementById('calCard').classList.add('aberto')}catch(_){}
-function tocarDia(iso){diaSel=(diaSel===iso)?null:iso;renderStages()}
+function tocarDia(iso){diaSel=(diaSel===iso)?null:iso;renderStages();if(diaSel)abrirLista(true)}
 
 function renderCalendario(){
   const etapa=Number(etapaFiltro.value)||1;
@@ -761,6 +785,7 @@ function mudarFiltro(f){
   document.getElementById('fPend').classList.toggle('on',f==='pend');
   document.getElementById('fOk').classList.toggle('on',f==='ok');
   renderStages();
+  abrirLista(true);
 }
 function alternarLancado(id){
   const r=registros.find(x=>String(x.id)===String(id));
@@ -933,7 +958,7 @@ async function fotoEscolhida(input){
     if(m.status==='recognizing text') fotoStatus('🔎 Lendo '+etapaLeitura+'... '+Math.round((m.progress||0)*100)+'%');
     else fotoStatus('⏳ Preparando o leitor... (só demora na 1ª vez)');
   };
-  const textos={topo:'',meio:'',extra:'',baixo:'',baixoL:'',baixo2:''};
+  const textos={topo:'',meio:'',extra:'',baixo:'',baixoL:'',baixo2:'',zoom:''};
   try{
     const w=await pegarLeitor();
     // 1) topo da conta: Número da Unidade Consumidora
@@ -951,8 +976,20 @@ async function fotoEscolhida(input){
     etapaLeitura='o medidor';
     textos.baixo=(await w.recognize(recortar(img,0.78,1,2000,'contraste'))).data.text||'';
     // v3.1: faixa maior (conta comprida, com aviso e código de barras embaixo)
-    textos.baixoL=(await w.recognize(recortar(img,0.55,1,2000,'contraste'))).data.text||'';
-    if(!acharMedidor(textos.baixo+'\n'+textos.baixoL).seguro){
+    const cL=recortar(img,0.55,1,2000,'contraste');
+    const rL=await w.recognize(cL,{},{text:true,blocks:true});
+    textos.baixoL=(rL&&rL.data&&rL.data.text)||'';
+    // v3.5: acha a linha do medidor (kWh / leituras / 1,00) e dá zoom só nela
+    const lm=acharLinhaMedidor(linhasDe(rL));
+    if(lm){
+      const esc=cL.width/img.width, H=img.height;
+      const yTop=0.55*H+lm.bbox.y0/esc, yBot=0.55*H+lm.bbox.y1/esc, h=Math.max(8,yBot-yTop);
+      etapaLeitura='o medidor de perto';
+      textos.zoom=(await w.recognize(recortar(img,Math.max(0,(yTop-1.2*h)/H),Math.min(1,(yBot+1.2*h)/H),2600,'contraste'))).data.text||'';
+      // recorte ampliado mostra essa linha e a anotação à caneta logo abaixo
+      document.getElementById('recorteImg').src=recortar(img,Math.max(0,(yTop-3*h)/H),Math.min(1,(yBot+7*h)/H),1100,'').toDataURL('image/jpeg',0.8);
+    }
+    if(!acharMedidor(textos.zoom+'\n'+textos.baixo+'\n'+textos.baixoL).seguro){
       textos.baixo2=(await w.recognize(recortar(img,0.66,1,2000,'limiar'))).data.text||'';
     }
   }catch(e){
@@ -1029,6 +1066,27 @@ function acharUC(texto){
   const m=t.match(/\d{1,3}(?:\.\d{3}){2,4}-\d{1,2}/);
   return m?m[0]:'';
 }
+// v3.5: linhas com posição (para dar zoom na linha do medidor)
+function linhasDe(r){
+  const d=(r&&r.data)||{};
+  if(Array.isArray(d.lines)&&d.lines.length) return d.lines;
+  const out=[]; (d.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>out.push(l))));
+  return out;
+}
+function acharLinhaMedidor(linhas){
+  let melhor=null;
+  (linhas||[]).forEach(l=>{
+    const t=String(l.text||''); if(!l.bbox) return;
+    let pts=0;
+    if(/k\s?[wv]?\s?h|kidh|kwh/i.test(t)) pts+=3;
+    if(/\b1[.,]00\b/.test(t)) pts+=2;
+    if(/\b\d{4,6}\s+\d{4,6}\b/.test(t)) pts+=2;      // leitura anterior e atual
+    if(/(?:^|[^0-9A-Za-z])(?:3[A-Za-z]|[A-Za-z$]{1,2})?[\s|]?\d{8,9}(?!\d)/.test(t)) pts+=2;  // número com cara de medidor
+    if(/d[eé]bito|conta|cep|nota|fiscal|chave|protocolo|c[oó]digo|cpf|vencimento|consumo\s*faturado|dias/i.test(t)) pts-=6;
+    if(pts>=2&&(!melhor||pts>melhor.pts)) melhor={pts,bbox:l.bbox,text:t};
+  });
+  return melhor;
+}
 // v3.3: prefixos de medidor que existem (Elektro Tatuí)
 const PREFIXOS=['M','B','3T','3G','AR','BG','AG'];
 // Corrige o prefixo lido errado. certo=false -> mostra os botões pra confirmar
@@ -1077,13 +1135,15 @@ function acharMedidor(texto){
 }
 
 function extrairDaConta(textos){
-  const tudo=[textos.topo,textos.extra||'',textos.baixo,textos.baixoL||'',textos.baixo2].join('\n');
+  const tudo=[textos.topo,textos.extra||'',textos.zoom||'',textos.baixo,textos.baixoL||'',textos.baixo2].join('\n');
   const codigo=acharUC(textos.topo)||acharUC(textos.extra||'')||acharUC(tudo);
-  const med=acharMedidor([textos.baixo,textos.baixoL||'',textos.baixo2].join('\n'));
+  // a linha com zoom vem primeiro (vale mais)
+  let med=acharMedidor(textos.zoom||'');
+  if(!med.seguro){ const m2=acharMedidor([textos.zoom||'',textos.baixo,textos.baixoL||'',textos.baixo2].join('\n')); if(m2.valor) med=m2; }
 
   // Leituras impressas (anterior e atual) — só de referência, a correta é a da caneta
   let ant='',atu='';
-  const baixo=(textos.baixo+'\n'+(textos.baixoL||'')+'\n'+textos.baixo2);
+  const baixo=((textos.zoom||'')+'\n'+textos.baixo+'\n'+(textos.baixoL||'')+'\n'+textos.baixo2);
   const par=baixo.match(/\b(\d{3,6})\s+(\d{3,6})\s+1[.,]00\b/)||baixo.match(/\b(\d{4,6})\s+(\d{4,6})\b/);
   if(par&&Number(par[2])>=Number(par[1])){ant=par[1];atu=par[2]}
 
@@ -1180,6 +1240,7 @@ etapaPelaData(dataLanc.value);
 // limpeza: fotos de leituras que já estão lançadas
 (function(){let mudou=false;registros.forEach(r=>{if(estaLancado(r)&&r.foto){descartarFotoSeLancada(r);mudou=true}});
   if(mudou) localStorage.setItem(KEY,JSON.stringify(registros));})();
+aplicarLista();
 renderStages();
 
 /* v2.0: se o app ficou aberto de um dia pro outro (no fundo do iPhone),
