@@ -286,7 +286,10 @@ input[type=date]{line-height:40px}
             <button type="button" id="alvoMedidor" onclick="mudarAlvo('medidor')">Medidor</button>
           </div>
           <div class="cands" id="fotoCands"></div>
-          <button type="button" class="tirar" onclick="tirarFoto()">✖ Tirar foto</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="tirar" style="background:#e8f0fe;color:#1a56b8" onclick="lerComIA()">🤖 Ler com IA</button>
+            <button type="button" class="tirar" onclick="tirarFoto()">✖ Tirar foto</button>
+          </div>
         </div>
       </div>
       <div class="recorte" id="recorteBox" hidden>
@@ -407,8 +410,11 @@ input[type=date]{line-height:40px}
    3.5 = foto de longe: acha a linha do medidor e dá zoom nela; recorte
          ampliado mostra essa linha + a anotação à caneta
    3.6 = se faltar medidor ou data, mostra a foto inteira: toque em cima do
-         número e o app lê só aquele pedaço de perto */
-const APP_VERSAO='3.6';
+         número e o app lê só aquele pedaço de perto
+   3.7 = 🤖 leitura por IA (Gemini grátis, chave só no celular): preenche
+         código, medidor, data, etapa e a leitura da caneta
+   3.8 = testa a chave da IA na hora de colar (✅ funcionando / ❌ recusada) */
+const APP_VERSAO='3.8';
 
 const APP_DATA='15/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
@@ -953,6 +959,9 @@ async function fotoEscolhida(input){
   fotoImgOrig=img; modoToque=false;
   document.getElementById('recorteDica').innerHTML='🔍 Parte de baixo da conta, ampliada (a leitura escrita à caneta fica aqui). Toque para ver maior.';
 
+  // v3.7: com a chave da IA salva, a IA lê tudo (cai no leitor comum se falhar)
+  if(chaveIA()){ if(await lerComIA(true)) return; }
+
   // Recorte ampliado da parte de baixo (medidor + leituras + caneta)
   document.getElementById('recorteImg').src=recortar(img,0.74,1,1100,'').toDataURL('image/jpeg',0.75);
   document.getElementById('recorteBox').hidden=false;
@@ -1047,6 +1056,100 @@ async function fotoEscolhida(input){
   if(!achado.medidor||!achado.dataAtual) ativarToque(!achado.medidor,!achado.dataAtual);
   else document.getElementById('leitura').focus({preventScroll:true});
 }
+/* ===== v3.7: leitura por IA (Google Gemini, plano grátis) =====
+   A chave fica só neste celular (localStorage), nunca no código. */
+const IA_KEY='leitura_forms_chave_ia';
+function chaveIA(){ try{return localStorage.getItem(IA_KEY)||''}catch(_){return ''} }
+function pedirChaveIA(){
+  const k=prompt('Cole aqui a sua chave da IA do Google (Gemini).\n\nComo pegar (grátis, sem cartão):\n1. Abra aistudio.google.com\n2. Entre com sua conta Google\n3. Toque em "Get API key" (Criar chave)\n4. Copie e cole aqui.\n\nA chave fica só neste celular.');
+  if(k&&k.trim()){ try{localStorage.setItem(IA_KEY,k.trim())}catch(_){}; return k.trim(); }
+  return '';
+}
+// v3.8: testa a chave pedindo a lista de modelos (não manda foto)
+async function testarChaveIA(k){
+  try{
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(k));
+    if(r.ok) return true;
+    const j=await r.json().catch(()=>({})); const msg=(j.error&&j.error.message)||('erro '+r.status);
+    if(r.status===400||r.status===401||r.status===403) return '❌ O Google recusou essa chave ('+esc(msg.slice(0,120))+'). Copie a chave de novo no AI Studio.';
+    return '⚠️ Não deu para testar agora ('+esc(msg.slice(0,80))+'). Tente de novo.';
+  }catch(_){ return '⚠️ Sem internet para testar a chave. Tente de novo.'; }
+}
+function esquecerChaveIA(){ try{localStorage.removeItem(IA_KEY)}catch(_){} }
+function dataBR2ISO(t){
+  const m=String(t||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m) return '';
+  const a=m[3].length===2?'20'+m[3]:m[3];
+  return a+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+}
+async function lerComIA(automatico){
+  if(!fotoImgOrig){ alert('Tire a foto da conta primeiro.'); return false; }
+  let k=chaveIA();
+  if(!k&&!automatico){
+    k=pedirChaveIA(); if(!k) return false;
+    fotoStatus('🔑 Testando a chave...');
+    const ok=await testarChaveIA(k);
+    if(ok!==true){ esquecerChaveIA(); fotoStatus(ok); alert(ok.replace(/<[^>]+>/g,'')); return false; }
+    fotoStatus('✅ Chave da IA funcionando! Lendo a conta...');
+  }
+  if(!k) return false;
+  fotoStatus('🤖 Lendo a conta com IA...');
+  const b64=recortar(fotoImgOrig,0,1,1600,'').toDataURL('image/jpeg',0.85).split(',')[1];
+  const pedido='Foto de uma conta de energia da Elektro (Neoenergia). Responda SOMENTE um JSON com as chaves: '
+   +'"uc" (NÚMERO DA UNIDADE CONSUMIDORA exatamente como impresso, ex. 2.639.618.045-45), '
+   +'"medidor" (coluna MEDIDOR da tabela de baixo, ex. B12911929; os prefixos possíveis são M, B, 3T, 3G, AR, BG, AG), '
+   +'"leitura_anterior" e "leitura_atual" (números impressos na tabela do medidor), '
+   +'"data_atual" (LEITURA ATUAL em DATAS DE LEITURAS, dd/mm/aaaa), "proxima" (PRÓXIMA LEITURA, dd/mm/aaaa), '
+   +'"caneta" (número escrito à mão/caneta na conta, só os dígitos; vazio se não houver). Use "" quando não conseguir ler.';
+  const corpo=JSON.stringify({contents:[{parts:[{text:pedido},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],
+    generationConfig:{responseMimeType:'application/json',temperature:0}});
+  let dados=null, erro='';
+  for(const modelo of ['gemini-flash-latest','gemini-flash-lite-latest']){
+    try{
+      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+modelo+':generateContent?key='+encodeURIComponent(k),
+        {method:'POST',headers:{'Content-Type':'application/json'},body:corpo});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok){
+        const msg=(j.error&&j.error.message)||'';
+        if(r.status===404) { erro='modelo'; continue; }
+        if(r.status===429) { erro='limite'; break; }
+        if(/api key|API_KEY|permission|invalid/i.test(msg)||r.status===401||r.status===403){ erro='chave'; break; }
+        erro='outro'; continue;
+      }
+      let txt=(((j.candidates||[])[0]||{}).content||{}).parts; txt=txt&&txt[0]&&txt[0].text||'';
+      txt=txt.replace(/^```(json)?/i,'').replace(/```$/,'').trim();
+      dados=JSON.parse(txt); break;
+    }catch(_){ erro=erro||'rede'; }
+  }
+  if(!dados){
+    if(erro==='chave'){ esquecerChaveIA(); fotoStatus('⚠️ A chave da IA não funcionou. Toque em 🤖 Ler com IA e cole a chave de novo.'); }
+    else if(erro==='limite') fotoStatus('⚠️ Muitas leituras seguidas (limite grátis). Espere 1 minuto e toque em 🤖 de novo.');
+    else fotoStatus('⚠️ A IA não respondeu (sem internet?). Usando o leitor comum...');
+    return false;
+  }
+  // preenche
+  const partes=[];
+  const uc=String(dados.uc||'').trim(); if(uc){ marcarAuto('codigo',uc); partes.push('C: <b>'+esc(uc)+'</b>'); }
+  let med=String(dados.medidor||'').toUpperCase().replace(/\s/g,'');
+  if(med){ marcarAuto('medidor',med); partes.push('Medidor: <b>'+esc(med)+'</b>'); }
+  const can=String(dados.caneta||'').replace(/\D/g,''); if(can){ marcarAuto('leitura',can); partes.push('Caneta: <b>'+esc(can)+'</b>'); }
+  const dAt=dataBR2ISO(dados.data_atual), pr=dataBR2ISO(dados.proxima);
+  if(dAt){
+    dataLanc.value=dAt;
+    const et=etapaDoDia(pr)||etapaDoDia(dAt);
+    const nota=document.getElementById('etapaNota');
+    if(et){ etapaFiltro.value=String(et); nota.className='etapanota'; nota.textContent='📅 pela conta'; renderStages(); }
+    partes.push('Data <b>'+brData(dAt)+'</b>'+(et?' → <b>Etapa '+et+'</b>':''));
+  }
+  const ant=String(dados.leitura_anterior||'').replace(/\D/g,''), atu=String(dados.leitura_atual||'').replace(/\D/g,'');
+  if(ant||atu){ const ref=document.getElementById('refConta'); ref.innerHTML='📄 Impresso na conta: anterior <b>'+esc(ant||'?')+'</b> • atual <b>'+esc(atu||'?')+'</b>'; ref.hidden=false; }
+  document.getElementById('fotoCands').innerHTML=''; document.getElementById('fotoAlvo').hidden=true;
+  document.getElementById('recorteImg').src=recortar(fotoImgOrig,0.55,1,1100,'').toDataURL('image/jpeg',0.8);
+  document.getElementById('recorteDica').innerHTML='🔍 Parte de baixo da conta. Toque para ver maior.';
+  document.getElementById('recorteBox').hidden=false; modoToque=false;
+  fotoStatus('🤖 '+partes.join(' • ')+'<br>Confira tudo, principalmente a leitura da caneta, e salve.');
+  return true;
+}
+
 /* ===== v3.6: tocar na foto em cima do que faltou ===== */
 let fotoImgOrig=null, modoToque=false;
 function ativarToque(faltaMed,faltaData){
