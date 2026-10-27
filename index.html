@@ -178,7 +178,14 @@ tr td:first-child{position:relative}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .stat{background:var(--light);border-radius:14px;padding:10px 12px}.stat b{font-size:20px;display:block;color:var(--green)}.stat span{font-size:11px;color:var(--muted)}
 footer{text-align:center;color:#83918c;font-size:11px;padding:8px 0 calc(env(safe-area-inset-bottom,0px) + 20px)}
-@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.campoData{grid-column:1 / -1}}
+@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}}
+/* v4.1: data e nº do livro lado a lado; data cabe na metade da tela no iPhone */
+.campoData,.campoLivro{min-width:0}
+.grid.semLivro .campoData{grid-column:1 / -1}
+#dataLanc{min-width:0;width:100%;max-width:100%;padding:0 8px;text-align:center;-webkit-appearance:none;appearance:none}
+#dataLanc::-webkit-date-and-time-value{text-align:center;margin:0}
+.opc{font-weight:700;color:var(--muted);font-size:11px}
+.livroTag{display:inline-block;margin-top:3px;font-size:10px;font-weight:800;color:var(--muted);background:#edf3f0;border-radius:999px;padding:1px 7px}
 @media(max-width:430px){
   .grid{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr 1fr}.actions button:last-child{grid-column:1 / -1}.toolbar{grid-template-columns:1fr auto}
   .tablewrap{overflow:hidden}
@@ -308,6 +315,7 @@ input[type=date]{line-height:40px}
       <div><label>Leitura <span class="req">*</span></label><input id="leitura" inputmode="numeric" placeholder="Digite a leitura"></div>
       <div><label>Etapa <span class="req">*</span> <span class="etapanota" id="etapaNota"></span></label><select id="etapaFiltro" aria-label="Etapa do lançamento" onchange="renderStages()"></select></div>
       <div class="campoData"><label>Data da leitura <span class="req">*</span></label><input id="dataLanc" type="date" aria-label="Data da leitura" onchange="etapaPelaData(this.value)" oninput="etapaPelaData(this.value)"></div>
+      <div class="campoLivro" id="campoLivro" hidden><label>Nº do livro <span class="opc">(opcional)</span></label><input id="livro" inputmode="numeric" autocomplete="off" placeholder="Livro"></div>
     </div>
     <div class="formsopc">
       <label>Lançou no Forms para arrumar? <span class="etapanota" style="color:var(--muted)">⏳ falta • ✅ já lancei</span></label>
@@ -374,6 +382,10 @@ input[type=date]{line-height:40px}
 
 
 <script>
+/* ===== Nº DO LIVRO =====
+   Começa a valer na Etapa 1 de novembro/2026 (03/11/2026, pelo calendário).
+   Antes disso o campo fica escondido. */
+const LIVRO_INICIO='2026-11-03';
 /* ===== VERSÃO DO APP =====
    A cada atualização, mude só estas duas linhas.
    1.0 = versão original
@@ -419,11 +431,16 @@ input[type=date]{line-height:40px}
          código, medidor, data, etapa e a leitura da caneta
    3.8 = testa a chave da IA na hora de colar (✅ funcionando / ❌ recusada)
    3.9 = 🗑️ ao lado do 📷 limpa tudo do formulário (campos, foto, avisos)
-   4.0 = IA: medidor sem confundir B com 8 (aviso à IA + conserto no app);
-         leitura mais rápida (foto menor, resposta direta sem "pensar") */
-const APP_VERSAO='4.0';
+   4.0 = IA: medidor sempre com letra (80307087 -> B0307087); foto menor e
+         resposta direta para a leitura ficar mais rápida; leitor comum aceita
+         letra + 7 dígitos
+   4.1 = Nº do livro (opcional) ao lado da data; a IA preenche se achar;
+         aparece na lista (📖), na pesquisa e na planilha
+   4.2 = Nº do livro só aparece a partir da Etapa 1 de novembro (03/11/2026);
+         antes disso a data ocupa a linha inteira */
+const APP_VERSAO='4.2';
 
-const APP_DATA='16/10/2026';
+const APP_DATA='27/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
 
@@ -541,6 +558,7 @@ function salvarLeitura(){
   const codigo=document.getElementById('codigo').value.trim();
   const medidor=document.getElementById('medidor').value.trim();
   const leitura=document.getElementById('leitura').value.trim();
+  const livro=document.getElementById('livro').value.trim();   // v4.1: opcional
   const etapa=Number(etapaFiltro.value)||1;
   const dia=dataLanc.value||hojeISO();
   const msg=document.getElementById('msg');
@@ -555,7 +573,7 @@ function salvarLeitura(){
     const r=registros.find(x=>String(x.id)===String(editandoId));
     if(r){
       const hora=String(r.data||'').split(', ')[1]||horaAgora();
-      Object.assign(r,{codigo,medidor,leitura,etapa,dia,data:brData(dia)+', '+hora,lancado:formsNovo});
+      Object.assign(r,{codigo,medidor,leitura,livro,etapa,dia,data:brData(dia)+', '+hora,lancado:formsNovo});
       if(fotoAtual && !formsNovo){ r.foto=true; fotoGuardar(r.id,fotoAtual).catch(()=>{}); }
       descartarFotoSeLancada(r);
       lembrarLetraMedidor(medidor);
@@ -574,7 +592,7 @@ function salvarLeitura(){
   const temFoto=!!fotoAtual && !formsNovo;   // v2.3: já lançada não guarda foto
   registros.push({
     id:novoId,
-    codigo,medidor,leitura,etapa,
+    codigo,medidor,leitura,livro,etapa,
     data:brData(dia)+', '+horaAgora(),
     dia:dia,
     foto:temFoto,
@@ -589,6 +607,7 @@ function salvarLeitura(){
   document.getElementById('codigo').value='';
   document.getElementById('medidor').value='';
   document.getElementById('leitura').value='';
+  document.getElementById('livro').value='';
 
   // Se lançou em outro mês, o calendário vai pra esse mês
   const [a,m]=dia.split('-').map(Number);
@@ -714,7 +733,7 @@ function renderStages(){
   container.innerHTML='';
   document.getElementById('printTitle').textContent='Leitura FORMS • Etapa '+etapaSelecionada+' • '+nomePeriodo();
 
-  const bateBusca=r=>!q || [r.codigo,r.medidor,r.leitura,r.data].some(x=>String(x).toLowerCase().includes(q));
+  const bateBusca=r=>!q || [r.codigo,r.medidor,r.leitura,r.data,r.livro||''].some(x=>String(x).toLowerCase().includes(q));
   // "Falta lançar" mostra TODAS as pendentes (qualquer etapa e qualquer dia), pra lançar de tarde de uma vez
   const lista = filtroForms==='pend'
     ? registros.filter(r=>!estaLancado(r) && bateBusca(r)).sort((a,b)=>Number(a.etapa)-Number(b.etapa)||String(a.dia).localeCompare(String(b.dia))).reverse()
@@ -751,7 +770,7 @@ function renderStages(){
   const tbody=document.createElement('tbody');
   lista.slice().reverse().forEach(r=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><b>${esc(r.codigo)}</b>${r.foto?` <button class="fotoico" type="button" title="Ver foto da conta" aria-label="Ver foto da conta" onclick="abrirFotoSalva('${r.id}')">📷</button>`:''}</td><td>${esc(r.medidor)}</td><td class="deleteCell"><div class="acoes"><button class="edit" type="button" title="Editar leitura" aria-label="Editar leitura" onclick="editar('${r.id}')">✏️</button><button class="del" title="Excluir leitura" aria-label="Excluir leitura" onclick="excluir('${r.id}')">🗑️</button></div></td><td><b>${esc(r.leitura)}</b></td><td>${filtroForms==='pend'?'<b>Etapa '+esc(r.etapa)+'</b><br>':''}${bolinhaPrazo(r)}${esc(r.data)}<br><button type="button" class="st ${estaLancado(r)?'ok':'pend'}" title="Tocar para trocar" onclick="alternarLancado('${r.id}')">${estaLancado(r)?'✅ Lançado':'⏳ Falta lançar'}</button></td>`;
+    tr.innerHTML=`<td><b>${esc(r.codigo)}</b>${r.livro?`<br><span class="livroTag">📖 ${esc(r.livro)}</span>`:''}${r.foto?` <button class="fotoico" type="button" title="Ver foto da conta" aria-label="Ver foto da conta" onclick="abrirFotoSalva('${r.id}')">📷</button>`:''}</td><td>${esc(r.medidor)}</td><td class="deleteCell"><div class="acoes"><button class="edit" type="button" title="Editar leitura" aria-label="Editar leitura" onclick="editar('${r.id}')">✏️</button><button class="del" title="Excluir leitura" aria-label="Excluir leitura" onclick="excluir('${r.id}')">🗑️</button></div></td><td><b>${esc(r.leitura)}</b></td><td>${filtroForms==='pend'?'<b>Etapa '+esc(r.etapa)+'</b><br>':''}${bolinhaPrazo(r)}${esc(r.data)}<br><button type="button" class="st ${estaLancado(r)?'ok':'pend'}" title="Tocar para trocar" onclick="alternarLancado('${r.id}')">${estaLancado(r)?'✅ Lançado':'⏳ Falta lançar'}</button></td>`;
     tbody.appendChild(tr);
   });
 
@@ -780,6 +799,20 @@ function atualizarResumo(){
    Leituras antigas (de antes da v1.5) contam como já lançadas. */
 let filtroForms='todos';
 let formsNovo=false;
+function livroLigado(){
+  if(hojeISO()>=LIVRO_INICIO) return true;
+  // editando uma leitura que já tem livro: mostra para poder ver/mudar
+  if(typeof editandoId!=='undefined'&&editandoId!==null){
+    const r=registros.find(x=>String(x.id)===String(editandoId)); if(r&&r.livro) return true;
+  }
+  return false;
+}
+function aplicarLivro(){
+  const on=livroLigado();
+  document.getElementById('campoLivro').hidden=!on;
+  document.querySelector('.formcard .grid').classList.toggle('semLivro',!on);
+  if(!on) document.getElementById('livro').value='';
+}
 function escolherForms(v){
   formsNovo=!!v;
   document.getElementById('optPend').classList.toggle('on',!formsNovo);
@@ -828,6 +861,8 @@ function editar(id){
   document.getElementById('codigo').value=r.codigo||'';
   document.getElementById('medidor').value=r.medidor||'';
   document.getElementById('leitura').value=r.leitura||'';
+  aplicarLivro();
+  document.getElementById('livro').value=r.livro||'';
   if(r.dia) dataLanc.value=r.dia;
   etapaFiltro.value=String(r.etapa||1);
   document.getElementById('etapaNota').textContent='';
@@ -842,10 +877,11 @@ function editar(id){
 }
 function sairDaEdicao(){
   editandoId=null;
-  ['codigo','medidor','leitura'].forEach(i=>document.getElementById(i).value='');
+  ['codigo','medidor','leitura','livro'].forEach(i=>document.getElementById(i).value='');
   tirarFoto();
   escolherForms(false);
   document.getElementById('formTitulo').textContent='➕ Lançar nova leitura';
+  setTimeout(aplicarLivro,0);
   document.getElementById('editAviso').hidden=true;
   document.getElementById('btnSalvar').textContent='💾';
   document.querySelector('.formcard').classList.remove('editando');
@@ -1083,6 +1119,21 @@ async function testarChaveIA(k){
   }catch(_){ return '⚠️ Sem internet para testar a chave. Tente de novo.'; }
 }
 function esquecerChaveIA(){ try{localStorage.removeItem(IA_KEY)}catch(_){} }
+// v4.0: o medidor sempre começa com M, B, 3T, 3G, AR, BG ou AG.
+// Se a IA mandar só números, o 1º dígito era a letra (8/6/0 -> B; 4/1 -> M).
+function corrigirMedidorIA(m){
+  m=String(m||'').toUpperCase().replace(/[\s.\-]/g,'');
+  if(!m) return '';
+  if(/^\d+$/.test(m)){
+    const p=m[0];
+    if(/[860]/.test(p)) return 'B'+m.slice(1);
+    if(/[41]/.test(p)) return 'M'+m.slice(1);
+    return m;
+  }
+  const x=m.match(/^(3[A-Z]|[A-Z$]{1,2})(\d+)$/);
+  if(x){ const n=normPrefixo(x[1]); if(n) return n.p+x[2]; }
+  return m;
+}
 function dataBR2ISO(t){
   const m=String(t||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m) return '';
   const a=m[3].length===2?'20'+m[3]:m[3];
@@ -1100,26 +1151,28 @@ async function lerComIA(automatico){
   }
   if(!k) return false;
   fotoStatus('🤖 Lendo a conta com IA...');
-  const b64=recortar(fotoImgOrig,0,1,1100,'').toDataURL('image/jpeg',0.7).split(',')[1];
+  const b64=recortar(fotoImgOrig,0,1,1280,'').toDataURL('image/jpeg',0.8).split(',')[1];
   const pedido='Foto de uma conta de energia da Elektro (Neoenergia). Responda SOMENTE um JSON com as chaves: '
    +'"uc" (NÚMERO DA UNIDADE CONSUMIDORA exatamente como impresso, ex. 2.639.618.045-45), '
-   +'"medidor" (coluna MEDIDOR da tabela de baixo, ex. B12911929 ou B0307087; SEMPRE começa com LETRA: M, B, 3T, 3G, AR, BG ou AG; o primeiro caractere "B" não é o número 8), '
+   +'"medidor" (coluna MEDIDOR da tabela de baixo, ex. B12911929 ou B0307087; SEMPRE começa com um destes prefixos: M, B, 3T, 3G, AR, BG, AG. Atenção: o B impresso parece o número 8, mas é a letra B), '
    +'"leitura_anterior" e "leitura_atual" (números impressos na tabela do medidor), '
    +'"data_atual" (LEITURA ATUAL em DATAS DE LEITURAS, dd/mm/aaaa), "proxima" (PRÓXIMA LEITURA, dd/mm/aaaa), '
-   +'"caneta" (número escrito à mão/caneta na conta, só os dígitos; vazio se não houver). Use "" quando não conseguir ler. Não explique nada.';
-  const base={contents:[{parts:[{text:pedido},{inline_data:{mime_type:'image/jpeg',data:b64}}]}]};
-  const cfgRapida={responseMimeType:'application/json',temperature:0,maxOutputTokens:400,thinkingConfig:{thinkingBudget:0}};
-  const cfgSimples={responseMimeType:'application/json',temperature:0,maxOutputTokens:400};
+   +'"caneta" (número escrito à mão/caneta na conta, só os dígitos; vazio se não houver), '
+   +'"livro" (número do LIVRO ou ROTEIRO de leitura, se estiver impresso ou escrito na conta; só os dígitos; vazio se não houver — não confunda com nota fiscal, UC, medidor ou leituras). Use "" quando não conseguir ler.';
+  const montar=rapido=>JSON.stringify({contents:[{parts:[{text:pedido},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],
+    generationConfig:Object.assign({responseMimeType:'application/json',temperature:0},rapido?{thinkingConfig:{thinkingBudget:0}}:{})});
+  let rapido=true;
   let dados=null, erro='';
   for(const modelo of ['gemini-flash-latest','gemini-flash-lite-latest']){
     try{
-      let r=null, j={};
-      for(const cfg of [cfgRapida,cfgSimples]){
+      let r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+modelo+':generateContent?key='+encodeURIComponent(k),
+        {method:'POST',headers:{'Content-Type':'application/json'},body:montar(rapido)});
+      let j=await r.json().catch(()=>({}));
+      if(!r.ok&&rapido&&r.status===400&&/think/i.test((j.error&&j.error.message)||'')){
+        rapido=false;
         r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+modelo+':generateContent?key='+encodeURIComponent(k),
-          {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({generationConfig:cfg},base))});
+          {method:'POST',headers:{'Content-Type':'application/json'},body:montar(false)});
         j=await r.json().catch(()=>({}));
-        if(r.status!==400||cfg===cfgSimples) break;   // 400 = modelo não aceita "sem pensar": tenta de novo normal
-        if(/api key|API_KEY/i.test((j.error&&j.error.message)||'')) break;
       }
       if(!r.ok){
         const msg=(j.error&&j.error.message)||'';
@@ -1145,6 +1198,7 @@ async function lerComIA(automatico){
   let med=corrigirMedidorIA(dados.medidor);
   if(med){ marcarAuto('medidor',med); partes.push('Medidor: <b>'+esc(med)+'</b>'); }
   const can=String(dados.caneta||'').replace(/\D/g,''); if(can){ marcarAuto('leitura',can); partes.push('Caneta: <b>'+esc(can)+'</b>'); }
+  const liv=livroLigado()?String(dados.livro||'').replace(/\D/g,''):''; if(liv){ marcarAuto('livro',liv); partes.push('Livro: <b>'+esc(liv)+'</b>'); }
   const dAt=dataBR2ISO(dados.data_atual), pr=dataBR2ISO(dados.proxima);
   if(dAt){
     dataLanc.value=dAt;
@@ -1218,7 +1272,7 @@ async function lerNoToque(e,el){
 /* v3.9: 🗑️ limpa o formulário (campos, foto e mensagens) */
 function limparFormulario(){
   if(editandoId!==null){ cancelarEdicao(); }
-  ['codigo','medidor','leitura'].forEach(i=>document.getElementById(i).value='');
+  ['codigo','medidor','leitura','livro'].forEach(i=>document.getElementById(i).value='');
   tirarFoto();
   const ref=document.getElementById('refConta'); if(ref){ref.hidden=true;ref.innerHTML='';}
   fotoStatus('');
@@ -1272,16 +1326,6 @@ function acharLinhaMedidor(linhas){
   });
   return melhor;
 }
-// v4.0: conserta o medidor devolvido pela IA (ela confunde B com 8)
-function corrigirMedidorIA(v){
-  let m=String(v||'').toUpperCase().replace(/[^0-9A-Z]/g,'');
-  if(!m) return '';
-  if(/^(3T|3G|AR|BG|AG|M|B)\d{6,9}$/.test(m)) return m;            // já está certo
-  if(/^\d{7,9}$/.test(m)) return 'B'+m.slice(1);                    // só números: o 1º era a letra (8 vira B)
-  const n=normPrefixo(m[0]);
-  if(n&&/^\D\d{7,9}$/.test(m)) return n.p+m.slice(1);               // letra parecida (P, R, D...)
-  return m;
-}
 // v3.3: prefixos de medidor que existem (Elektro Tatuí)
 const PREFIXOS=['M','B','3T','3G','AR','BG','AG'];
 // Corrige o prefixo lido errado. certo=false -> mostra os botões pra confirmar
@@ -1313,13 +1357,14 @@ function acharMedidor(texto){
         const n=normPrefixo(pre);
         if(!n) continue;
         pref=n.p; certo=n.certo;
-        if(pref.length===1&&dig.length!==8) continue;
+        if(pref.length===1&&dig.length!==8&&dig.length!==7) continue;   // B0307087 tem 7 dígitos
       }else{
         if(dig.length===9){                         // letra lida como número
           const p1=normPrefixo(dig[0]);
           if(p1){pref=p1.p;}else if(/[41]/.test(dig[0])){pref='M';}else{pref=salvo;}
           dig=dig.slice(1); certo=false;
-        }else if(dig.length===8){ pref=salvo; certo=false; }
+        }else if(dig.length===8&&/[86]/.test(dig[0])){ pref='B'; dig=dig.slice(1); certo=false; }   // B lido como 8
+        else if(dig.length===8){ pref=salvo; certo=false; }
         else continue;
       }
       const c={valor:pref+dig,letraPosta:certo?'':pref,pts,seguro:pts>=2};
@@ -1421,9 +1466,9 @@ function esc(v){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;',
 function exportarCSV(){
   const lista=registrosDoPeriodo();
   if(!lista.length){alert('Não há leituras em '+nomePeriodo()+' para exportar.');return}
-  const linhas=[['C','Número do medidor','Leitura','Etapa','Data de lançamento','Forms']];
+  const linhas=[['C','Número do medidor','Leitura','Nº do livro','Etapa','Data de lançamento','Forms']];
   lista.slice().sort((a,b)=>Number(a.etapa)-Number(b.etapa)||String(a.dia).localeCompare(String(b.dia)))
-    .forEach(r=>linhas.push([r.codigo,r.medidor,r.leitura,r.etapa,r.data,estaLancado(r)?'Lançado':'Falta lançar']));
+    .forEach(r=>linhas.push([r.codigo,r.medidor,r.leitura,r.livro||'',r.etapa,r.data,estaLancado(r)?'Lançado':'Falta lançar']));
   const csv='\ufeff'+linhas.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
@@ -1436,6 +1481,7 @@ etapaPelaData(dataLanc.value);
 (function(){let mudou=false;registros.forEach(r=>{if(estaLancado(r)&&r.foto){descartarFotoSeLancada(r);mudou=true}});
   if(mudou) localStorage.setItem(KEY,JSON.stringify(registros));})();
 aplicarLista();
+aplicarLivro();
 renderStages();
 
 /* v2.0: se o app ficou aberto de um dia pro outro (no fundo do iPhone),
@@ -1446,6 +1492,7 @@ function conferirVirada(){
   if(hoje===diaAberto) return;
   const estavaNoDiaAntigo=(dataLanc.value===diaAberto||!dataLanc.value);
   diaAberto=hoje;
+  aplicarLivro();
   if(estavaNoDiaAntigo&&editandoId===null){
     dataLanc.value=hoje;
     const [a,m]=hoje.split('-').map(Number); anoVisto=a; mesVisto=m-1; diaSel=null;
