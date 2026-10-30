@@ -437,10 +437,13 @@ const LIVRO_INICIO='2026-11-03';
    4.1 = Nº do livro (opcional) ao lado da data; a IA preenche se achar;
          aparece na lista (📖), na pesquisa e na planilha
    4.2 = Nº do livro só aparece a partir da Etapa 1 de novembro (03/11/2026);
-         antes disso a data ocupa a linha inteira */
-const APP_VERSAO='4.2';
+         antes disso a data ocupa a linha inteira
+   4.3 = dia sem leitura no calendário ficava na última etapa (trocado na 4.4)
+   4.4 = dia sem leitura no calendário (fim de semana, feriado, fim de mês):
+         etapa em branco, "sem leitura hoje"; para salvar nesse dia, escolha a etapa */
+const APP_VERSAO='4.4';
 
-const APP_DATA='27/10/2026';
+const APP_DATA='30/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
 
@@ -458,6 +461,7 @@ let diaSel=null;               // 'AAAA-MM-DD' ou null (mês inteiro)
 const etapaFiltro=document.getElementById('etapaFiltro');
 const dataLanc=document.getElementById('dataLanc');
 
+{ const o0=document.createElement('option'); o0.value=''; o0.textContent='— sem leitura hoje —'; etapaFiltro.appendChild(o0); }
 for(let i=1;i<=18;i++){
   const o=document.createElement('option');
   o.value=i;
@@ -548,10 +552,36 @@ function etapaPelaData(iso,origem){
     nota.textContent='📅 '+(origem||'pelo calendário');
     renderStages();
   }else{
+    // v4.4: dia sem leitura (fim de semana, feriado, fim de mês): etapa em branco
+    etapaFiltro.value='';
     nota.className='etapanota fora';
-    nota.textContent=iso?'📅 dia fora do calendário':'';
+    nota.textContent=iso?'📅 sem leitura hoje':'';
+    renderStages();
   }
   return e;
+}
+// Etapa usada para mostrar a lista/calendário quando o campo está em branco
+function etapaVista(){
+  const v=Number(etapaFiltro.value); if(v) return v;
+  const u=ultimaEtapaAte(dataLanc.value||hojeISO()); return u?u.etapa:1;
+}
+// Última etapa com leitura até a data (procura no mês da data e no anterior)
+function ultimaEtapaAte(iso){
+  const p=String(iso||'').split('-'); if(p.length<3) return null;
+  let a=Number(p[0]), m=Number(p[1]);
+  for(let volta=0;volta<2;volta++){
+    const k=a+'-'+String(m).padStart(2,'0');
+    const linha=CAL_LEITURA[k];
+    if(linha){
+      const dias=linha.split(' ');
+      for(let i=dias.length-1;i>=0;i--){
+        const d=k+'-'+dias[i];
+        if(d<=iso) return {etapa:i+1,dia:d};
+      }
+    }
+    m--; if(m<1){m=12;a--;}
+  }
+  return null;
 }
 
 function salvarLeitura(){
@@ -559,9 +589,14 @@ function salvarLeitura(){
   const medidor=document.getElementById('medidor').value.trim();
   const leitura=document.getElementById('leitura').value.trim();
   const livro=document.getElementById('livro').value.trim();   // v4.1: opcional
-  const etapa=Number(etapaFiltro.value)||1;
+  const etapa=Number(etapaFiltro.value)||0;
   const dia=dataLanc.value||hojeISO();
   const msg=document.getElementById('msg');
+  if(!etapa){
+    msg.textContent='⚠️ Escolha a etapa (esse dia não tem leitura no calendário).';
+    etapaFiltro.focus();
+    return;
+  }
 
   if(!codigo||!medidor||!leitura){
     msg.textContent='⚠️ Preencha C, medidor e leitura.';
@@ -676,7 +711,7 @@ try{if(localStorage.getItem(CAL_KEY)==='1') document.getElementById('calCard').c
 function tocarDia(iso){diaSel=(diaSel===iso)?null:iso;renderStages();if(diaSel)abrirLista(true)}
 
 function renderCalendario(){
-  const etapa=Number(etapaFiltro.value)||1;
+  const etapa=etapaVista();
   const pref=prefixoMes();
   const hoje=hojeISO();
   const porDia={};
@@ -728,7 +763,7 @@ function registrosDoPeriodo(){
 function renderStages(){
   renderCalendario();
   const q=document.getElementById('busca').value.trim().toLowerCase();
-  const etapaSelecionada=Number(document.getElementById('etapaFiltro').value)||1;
+  const etapaSelecionada=etapaVista();
   const container=document.getElementById('stagesContainer');
   container.innerHTML='';
   document.getElementById('printTitle').textContent='Leitura FORMS • Etapa '+etapaSelecionada+' • '+nomePeriodo();
