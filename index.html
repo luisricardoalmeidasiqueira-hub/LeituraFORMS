@@ -440,8 +440,10 @@ const LIVRO_INICIO='2026-11-03';
          antes disso a data ocupa a linha inteira
    4.3 = dia sem leitura no calendário ficava na última etapa (trocado na 4.4)
    4.4 = dia sem leitura no calendário (fim de semana, feriado, fim de mês):
-         etapa em branco, "sem leitura hoje"; para salvar nesse dia, escolha a etapa */
-const APP_VERSAO='4.4';
+         etapa em branco, "sem leitura hoje"; para salvar nesse dia, escolha a etapa
+   4.5 = IA separa os dois números à caneta: o com "L"/"Livro" vai para o livro,
+         o outro é a leitura correta */
+const APP_VERSAO='4.5';
 
 const APP_DATA='30/10/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
@@ -1192,8 +1194,9 @@ async function lerComIA(automatico){
    +'"medidor" (coluna MEDIDOR da tabela de baixo, ex. B12911929 ou B0307087; SEMPRE começa com um destes prefixos: M, B, 3T, 3G, AR, BG, AG. Atenção: o B impresso parece o número 8, mas é a letra B), '
    +'"leitura_anterior" e "leitura_atual" (números impressos na tabela do medidor), '
    +'"data_atual" (LEITURA ATUAL em DATAS DE LEITURAS, dd/mm/aaaa), "proxima" (PRÓXIMA LEITURA, dd/mm/aaaa), '
-   +'"caneta" (número escrito à mão/caneta na conta, só os dígitos; vazio se não houver), '
-   +'"livro" (número do LIVRO ou ROTEIRO de leitura, se estiver impresso ou escrito na conta; só os dígitos; vazio se não houver — não confunda com nota fiscal, UC, medidor ou leituras). Use "" quando não conseguir ler.';
+   +'"caneta" (a LEITURA CORRETA escrita à mão/caneta na conta — normalmente perto da tabela do medidor; só os dígitos; vazio se não houver; NÃO é o número marcado com L/Livro), '
+   +'"livro" (número do LIVRO de leitura: pode estar impresso ou escrito à mão com "L", "L.", "Liv" ou "Livro" antes do número, ex. "L 412" -> 412; também vale escrito à mão e circulado longe da tabela do medidor; só os dígitos; vazio se não houver — não confunda com nota fiscal, UC, medidor ou leituras). '
+   +'Se houver dois números escritos à mão: o que tem L/Livro (ou circulado) é o "livro"; o outro é a "caneta". Use "" quando não conseguir ler.';
   const montar=rapido=>JSON.stringify({contents:[{parts:[{text:pedido},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],
     generationConfig:Object.assign({responseMimeType:'application/json',temperature:0},rapido?{thinkingConfig:{thinkingBudget:0}}:{})});
   let rapido=true;
