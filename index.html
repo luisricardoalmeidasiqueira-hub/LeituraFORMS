@@ -32,6 +32,23 @@ header{background:linear-gradient(135deg,var(--green),#0a8150);color:white;
 header{position:sticky}
 button.count{color:#fff;font-weight:700;min-height:0;cursor:pointer}
 .topoDir{display:flex;align-items:stretch;gap:6px;flex-shrink:0}
+/* v4.8: 🗑️ e 📷 no topo */
+.btnTopoIc{min-height:0;width:46px;padding:0;border-radius:10px;font-size:20px;line-height:1;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25)}
+.btnTopoIc.foto{background:#0b5f8a;border-color:rgba(255,255,255,.35)}
+.btnTopoIc.limpar{background:rgba(254,236,235,.92);border-color:#f5c9c5}
+.formtopo:has(#formTitulo:empty){display:none}
+@media(max-width:440px){
+  .subtitle{display:none}
+  .sun{font-size:19px}
+  .brand{font-size:16px;white-space:nowrap}
+  .headerline{gap:6px}
+  .topoDir{gap:5px}
+  .btnTopoIc{width:42px;font-size:18px}
+  .btnAtualizarTopo{padding:5px 6px}
+  button.count{padding:5px 7px}
+}
+@media(max-width:360px){.sun{display:none}.brand{font-size:14px}.btnTopoIc{width:38px;font-size:16px}.logo,.logo>div{min-width:0;overflow:hidden}.brand{overflow:hidden;text-overflow:ellipsis}}
 .btnAtualizarTopo{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;
   min-height:0;padding:5px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:10px;font-weight:700}
 .btnAtualizarTopo .ic{font-size:14px;line-height:1}
@@ -146,6 +163,13 @@ input.auto{background:#eaf7f0;border-color:var(--green2)}
 .prazo{background:transparent;min-height:20px;padding:0 2px 0 0;font-size:12px;vertical-align:baseline}
 .prazotxt{font-size:10px;font-weight:800;color:#b42318}
 .formsopc{margin-top:10px}
+/* v4.6: ⏳ ✅ e os botões na mesma linha */
+.linhaAcoes{display:flex;gap:8px;align-items:stretch;margin-top:12px}
+.linhaAcoes .formsopc{flex:2;margin:0;min-width:0;padding:3px;border-radius:999px;background:#f4f7f6}
+.linhaAcoes .formsopc .seg{gap:3px;height:100%}
+.linhaAcoes .formsopc .seg button{min-height:34px!important;padding:0;font-size:15px;border-width:2px}
+.linhaAcoes .actions.icones{flex:4;margin:0!important;gap:6px;min-width:0}
+.linhaAcoes .actions.icones button{min-height:40px!important;font-size:15px}
 .edit{background:#e8f0fe;color:#1a56b8;border:1px solid #c5d8f8;width:32px;min-width:32px;height:30px;min-height:30px;padding:0;border-radius:8px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}
 .deleteCell .acoes{display:flex;flex-direction:column;gap:5px;align-items:center}
 .formcard{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 80px)}
@@ -266,6 +290,8 @@ input[type=date]{line-height:40px}
   <div class="headerline">
     <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras • <span class="appVersao"></span></div></div></div>
     <div class="topoDir">
+    <button type="button" class="btnTopoIc limpar" onclick="limparFormulario()" title="Limpar tudo" aria-label="Limpar tudo">🗑️</button>
+    <button type="button" class="btnTopoIc foto" onclick="document.getElementById('fotoInput').click()" title="Foto da conta (preenche sozinho)" aria-label="Foto da conta (preenche sozinho)">📷</button>
     <button type="button" class="btnAtualizarTopo" id="btnAtualizarApp" title="Atualizar aplicativo" aria-label="Atualizar aplicativo"><span class="ic">🔄</span><span class="appVersao"></span></button>
     <button type="button" class="count" id="btnTopo" onclick="alternarPainelEtapas()" aria-label="Ver as etapas com leitura no mês"><b><span id="totalTop">0</span> <i class="setinha">▾</i></b>no mês</button>
     </div>
@@ -279,11 +305,7 @@ input[type=date]{line-height:40px}
 <main>
   <section class="card formcard">
     <div class="formtopo">
-      <h2 id="formTitulo">➕ Lançar nova leitura</h2>
-      <span style="display:flex;gap:6px">
-        <button type="button" class="foto-btn icone limpar" onclick="limparFormulario()" title="Limpar tudo" aria-label="Limpar tudo">🗑️</button>
-        <button type="button" class="foto-btn icone" onclick="document.getElementById('fotoInput').click()" title="Foto da conta (preenche sozinho)" aria-label="Foto da conta (preenche sozinho)">📷</button>
-      </span>
+      <h2 id="formTitulo"></h2>
     </div>
     <div class="editaviso" id="editAviso" hidden><span id="editTexto">✏️ Editando leitura</span><button type="button" onclick="cancelarEdicao()">✖ Cancelar</button></div>
     <div class="fotobox">
@@ -317,8 +339,8 @@ input[type=date]{line-height:40px}
       <div class="campoData"><label>Data da leitura <span class="req">*</span></label><input id="dataLanc" type="date" aria-label="Data da leitura" onchange="etapaPelaData(this.value)" oninput="etapaPelaData(this.value)"></div>
       <div class="campoLivro" id="campoLivro" hidden><label>Nº do livro <span class="opc">(opcional)</span></label><input id="livro" inputmode="numeric" autocomplete="off" placeholder="Livro"></div>
     </div>
-    <div class="formsopc">
-      <label>Lançou no Forms para arrumar? <span class="etapanota" style="color:var(--muted)">⏳ falta • ✅ já lancei</span></label>
+    <div class="linhaAcoes">
+    <div class="formsopc" title="Lançou no Forms para arrumar? ⏳ falta • ✅ já lancei">
       <div class="seg">
         <button type="button" id="optPend" class="pend on" onclick="escolherForms(false)" title="Falta lançar" aria-label="Falta lançar">⏳</button>
         <button type="button" id="optOk" class="ok" onclick="escolherForms(true)" title="Já lancei" aria-label="Já lancei">✅</button>
@@ -329,6 +351,7 @@ input[type=date]{line-height:40px}
       <button class="blue" onclick="exportarCSV()" title="Exportar planilha" aria-label="Exportar planilha">⬇️</button>
       <button class="orange" onclick="window.print()" title="Imprimir" aria-label="Imprimir">🖨️</button>
       <button class="primary" id="btnCompartilharApp" type="button" title="Compartilhar aplicativo" aria-label="Compartilhar aplicativo">↗️</button>
+    </div>
     </div>
     <div id="msg" class="message"></div>
   </section>
@@ -383,9 +406,9 @@ input[type=date]{line-height:40px}
 
 <script>
 /* ===== Nº DO LIVRO =====
-   Começa a valer na Etapa 1 de novembro/2026 (03/11/2026, pelo calendário).
+   Começa a valer em novembro/2026 (01/11/2026).
    Antes disso o campo fica escondido. */
-const LIVRO_INICIO='2026-11-03';
+const LIVRO_INICIO='2026-11-01';
 /* ===== VERSÃO DO APP =====
    A cada atualização, mude só estas duas linhas.
    1.0 = versão original
@@ -442,10 +465,15 @@ const LIVRO_INICIO='2026-11-03';
    4.4 = dia sem leitura no calendário (fim de semana, feriado, fim de mês):
          etapa em branco, "sem leitura hoje"; para salvar nesse dia, escolha a etapa
    4.5 = IA separa os dois números à caneta: o com "L"/"Livro" vai para o livro,
-         o outro é a leitura correta */
-const APP_VERSAO='4.5';
+         o outro é a leitura correta
+   4.6 = ⏳ ✅ e 💾 ⬇️ 🖨️ ↗️ na mesma linha; Nº do livro a partir de 01/11;
+         etapa em branco mostra só "—" (não corta no iPhone)
+   4.7 = saiu o título "Lançar nova leitura"; ficam só 🗑️ e 📷 no topo do formulário
+   4.8 = 🗑️ e 📷 subiram para o topo (ao lado do 🔄); no celular sai a frase
+         "Acompanhamento de Leituras" para caber (versão segue no 🔄 e no rodapé) */
+const APP_VERSAO='4.8';
 
-const APP_DATA='30/10/2026';
+const APP_DATA='01/11/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
 
@@ -463,7 +491,7 @@ let diaSel=null;               // 'AAAA-MM-DD' ou null (mês inteiro)
 const etapaFiltro=document.getElementById('etapaFiltro');
 const dataLanc=document.getElementById('dataLanc');
 
-{ const o0=document.createElement('option'); o0.value=''; o0.textContent='— sem leitura hoje —'; etapaFiltro.appendChild(o0); }
+{ const o0=document.createElement('option'); o0.value=''; o0.textContent='—'; etapaFiltro.appendChild(o0); }
 for(let i=1;i<=18;i++){
   const o=document.createElement('option');
   o.value=i;
@@ -904,7 +932,7 @@ function editar(id){
   etapaFiltro.value=String(r.etapa||1);
   document.getElementById('etapaNota').textContent='';
   escolherForms(estaLancado(r));
-  document.getElementById('formTitulo').textContent='✏️ Editar leitura';
+  document.getElementById('formTitulo').textContent='✏️ Editando';
   document.getElementById('editTexto').textContent='✏️ Editando C '+(r.codigo||'')+' • Etapa '+(r.etapa||'');
   document.getElementById('editAviso').hidden=false;
   document.getElementById('btnSalvar').textContent='💾✏️';
@@ -917,7 +945,7 @@ function sairDaEdicao(){
   ['codigo','medidor','leitura','livro'].forEach(i=>document.getElementById(i).value='');
   tirarFoto();
   escolherForms(false);
-  document.getElementById('formTitulo').textContent='➕ Lançar nova leitura';
+  document.getElementById('formTitulo').textContent='';
   setTimeout(aplicarLivro,0);
   document.getElementById('editAviso').hidden=true;
   document.getElementById('btnSalvar').textContent='💾';
