@@ -37,7 +37,8 @@ button.count{color:#fff;font-weight:700;min-height:0;cursor:pointer}
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25)}
 .btnTopoIc.foto{background:#0b5f8a;border-color:rgba(255,255,255,.35)}
 .btnTopoIc.chave{width:34px;font-size:15px;position:relative}
-.dotChave{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#ed9700;box-shadow:0 0 0 2px rgba(0,0,0,.15)}
+.dotChave{position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#ed9700;box-shadow:0 0 0 2px rgba(0,0,0,.18)}
+.dotChave.ok{background:#22c55e}.dotChave.testando{background:#facc15}.dotChave.sem{background:#f97316}.dotChave.ruim{background:#ef4444}
 .btnTopoIc.limpar{background:rgba(254,236,235,.92);border-color:#f5c9c5}
 .formtopo:has(#formTitulo:empty){display:none}
 @media(max-width:440px){
@@ -296,7 +297,7 @@ input[type=date]{line-height:40px}
     <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras • <span class="appVersao"></span></div></div></div>
     <div class="topoDir">
     <button type="button" class="btnTopoIc limpar" onclick="limparFormulario()" title="Limpar tudo" aria-label="Limpar tudo">🗑️</button>
-    <button type="button" class="btnTopoIc chave" onclick="trocarChaveIA()" title="Chave da IA" aria-label="Chave da IA">🔑<span class="dotChave" id="dotChave" hidden></span></button>
+    <button type="button" class="btnTopoIc chave" onclick="statusChaveIA()" title="Chave da IA" aria-label="Chave da IA">🔑<span class="dotChave" id="dotChave"></span></button>
     <button type="button" class="btnTopoIc foto" onclick="document.getElementById('fotoInput').click()" title="Foto da conta (preenche sozinho)" aria-label="Foto da conta (preenche sozinho)">📷</button>
     <button type="button" class="btnAtualizarTopo" id="btnAtualizarApp" title="Atualizar aplicativo" aria-label="Atualizar aplicativo"><span class="ic">🔄</span><span class="appVersao"></span></button>
     <button type="button" class="count" id="btnTopo" onclick="alternarPainelEtapas()" aria-label="Ver as etapas com leitura no mês"><b><span id="totalTop">0</span> <i class="setinha">▾</i></b>no mês</button>
@@ -482,8 +483,10 @@ const LIVRO_INICIO='2026-11-01';
          apagava); aviso mostra o que o Google respondeu; 🔑 para trocar a chave
    5.0 = etapa pela conta = a que mais aparece entre leitura anterior, atual e
          próxima (04/12 dava Etapa 3 numa conta da Etapa 2); 🔑 no topo para
-         cadastrar a chave (bolinha laranja quando não tem chave) */
-const APP_VERSAO='5.0';
+         cadastrar a chave (bolinha laranja quando não tem chave)
+   5.1 = bolinha da chave da IA: 🟢 funcionando · 🟡 testando · 🟠 sem chave ·
+         🔴 recusada; tocar no 🔑 mostra a legenda e deixa trocar a chave */
+const APP_VERSAO='5.1';
 
 const APP_DATA='05/11/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
@@ -1201,12 +1204,39 @@ async function trocarChaveIA(){
   fotoStatus('🔑 Testando a chave...');
   const ok=await testarChaveIA(k);
   if(ok!==true&&ok.startsWith('❌')){ if(antiga){try{localStorage.setItem(IA_KEY,antiga)}catch(_){}} else esquecerChaveIA(); marcarChave(); fotoStatus(ok); if(!fotoImgOrig) alert(ok.replace(/<[^>]+>/g,'')); return; }
-  marcarChave();
+  estadoChave(ok===true?'ok':''); marcarChave();
   fotoStatus('✅ Chave nova guardada.'+(fotoImgOrig?' Lendo a conta...':''));
   if(!fotoImgOrig) alert(ok===true?'✅ Chave da IA guardada e funcionando!':'🔑 Chave guardada. (Não deu para testar agora; ela será usada na próxima foto.)');
   if(fotoImgOrig) lerComIA(true);
 }
-function marcarChave(){ const d=document.getElementById('dotChave'); if(d) d.hidden=!!chaveIA(); }
+/* v5.1: bolinha da chave — 🟢 ok · 🟡 testando · 🟠 sem chave · 🔴 recusada */
+const IA_ST='leitura_forms_chave_status';
+function estadoChave(v){ if(v!==undefined){ try{localStorage.setItem(IA_ST,v)}catch(_){} } try{return localStorage.getItem(IA_ST)||''}catch(_){return ''} }
+let testandoChave=false;
+function marcarChave(){
+  const d=document.getElementById('dotChave'); if(!d) return;
+  const st=estadoChave();
+  d.className='dotChave '+(testandoChave?'testando':!chaveIA()?'sem':st==='ruim'?'ruim':'ok');
+}
+async function conferirChaveAoAbrir(){
+  const k=chaveIA(); if(!k){ marcarChave(); return; }
+  testandoChave=true; marcarChave();
+  const ok=await testarChaveIA(k);
+  testandoChave=false;
+  if(ok===true) estadoChave('ok'); else if(String(ok).startsWith('❌')) estadoChave('ruim');
+  marcarChave();
+}
+async function statusChaveIA(){
+  const leg='\n\nLegenda da bolinha no 🔑:\n🟢 chave guardada e funcionando\n🟡 testando a chave\n🟠 sem chave (a IA não lê)\n🔴 o Google recusou a chave';
+  if(!chaveIA()){ if(confirm('🟠 Ainda não tem chave da IA guardada.'+leg+'\n\nCadastrar a chave agora?')) trocarChaveIA(); return; }
+  testandoChave=true; marcarChave();
+  const ok=await testarChaveIA(chaveIA());
+  testandoChave=false;
+  if(ok===true) estadoChave('ok'); else if(String(ok).startsWith('❌')) estadoChave('ruim');
+  marcarChave();
+  const txt=ok===true?'🟢 Chave da IA guardada e funcionando.':String(ok).startsWith('❌')?'🔴 O Google recusou a chave guardada.':'🟡 A chave está guardada, mas não deu para testar agora (sem internet?).';
+  if(confirm(txt+leg+'\n\nQuer trocar a chave?')) trocarChaveIA();
+}
 function esquecerChaveIA(){ try{localStorage.removeItem(IA_KEY)}catch(_){} marcarChave(); }
 // v4.0: o medidor sempre começa com M, B, 3T, 3G, AR, BG ou AG.
 // Se a IA mandar só números, o 1º dígito era a letra (8/6/0 -> B; 4/1 -> M).
@@ -1236,6 +1266,7 @@ async function lerComIA(automatico){
     fotoStatus('🔑 Testando a chave...');
     const ok=await testarChaveIA(k);
     if(ok!==true&&ok.startsWith('❌')){ esquecerChaveIA(); fotoStatus(ok); alert(ok.replace(/<[^>]+>/g,'')); return false; }
+    estadoChave(ok===true?'ok':''); marcarChave();
     fotoStatus(ok===true?'✅ Chave da IA funcionando! Lendo a conta...':'🔑 Chave guardada. Lendo a conta...');
   }
   if(!k) return false;
@@ -1282,6 +1313,7 @@ async function lerComIA(automatico){
     // v4.9: a chave NUNCA é apagada sozinha; o aviso mostra o que o Google respondeu
     const det=msgErro?'<br><small style="color:var(--muted)">Google: '+esc(msgErro.slice(0,140))+'</small>':'';
     const btnChave=' <button type="button" class="cand" style="min-height:26px" onclick="trocarChaveIA()">🔑 Trocar chave</button>';
+    if(erro==='chave'){ estadoChave('ruim'); marcarChave(); }
     if(erro==='chave') avisoIA='⚠️ O Google recusou a chave da IA.'+btnChave+det;
     else if(erro==='limite') avisoIA='⚠️ Muitas leituras seguidas (limite grátis). Espere 1 minuto e toque em 🤖 de novo.'+det;
     else if(erro==='rede') avisoIA='⚠️ Sem internet para a IA (usei o leitor comum). Quando voltar a internet, toque em 🤖.';
@@ -1290,7 +1322,7 @@ async function lerComIA(automatico){
     return false;
   }
   // preenche
-  avisoIA='';
+  avisoIA=''; estadoChave('ok'); marcarChave();
   const partes=[];
   const uc=String(dados.uc||'').trim(); if(uc){ marcarAuto('codigo',uc); partes.push('C: <b>'+esc(uc)+'</b>'); }
   let med=corrigirMedidorIA(dados.medidor);
@@ -1603,6 +1635,7 @@ etapaPelaData(dataLanc.value);
 aplicarLista();
 aplicarLivro();
 marcarChave();
+conferirChaveAoAbrir();
 renderStages();
 
 /* v2.0: se o app ficou aberto de um dia pro outro (no fundo do iPhone),
