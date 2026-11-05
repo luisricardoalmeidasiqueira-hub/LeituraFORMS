@@ -36,6 +36,8 @@ button.count{color:#fff;font-weight:700;min-height:0;cursor:pointer}
 .btnTopoIc{min-height:0;width:46px;padding:0;border-radius:10px;font-size:20px;line-height:1;
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25)}
 .btnTopoIc.foto{background:#0b5f8a;border-color:rgba(255,255,255,.35)}
+.btnTopoIc.chave{width:34px;font-size:15px;position:relative}
+.dotChave{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#ed9700;box-shadow:0 0 0 2px rgba(0,0,0,.15)}
 .btnTopoIc.limpar{background:rgba(254,236,235,.92);border-color:#f5c9c5}
 .formtopo:has(#formTitulo:empty){display:none}
 @media(max-width:440px){
@@ -48,6 +50,9 @@ button.count{color:#fff;font-weight:700;min-height:0;cursor:pointer}
   .btnAtualizarTopo{padding:5px 6px}
   button.count{padding:5px 7px}
 }
+@media(max-width:400px){.btnTopoIc.chave{width:30px;font-size:13px}.btnTopoIc{width:38px;font-size:17px}
+  .sun{display:none}.brand{font-size:15px}.logo,.logo>div{min-width:0;overflow:hidden}.brand{overflow:hidden;text-overflow:ellipsis}
+  .topoDir{gap:4px}.headerline{gap:6px}}
 @media(max-width:360px){.sun{display:none}.brand{font-size:14px}.btnTopoIc{width:38px;font-size:16px}.logo,.logo>div{min-width:0;overflow:hidden}.brand{overflow:hidden;text-overflow:ellipsis}}
 .btnAtualizarTopo{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;
   min-height:0;padding:5px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:10px;font-weight:700}
@@ -291,6 +296,7 @@ input[type=date]{line-height:40px}
     <div class="logo"><div class="sun">📋</div><div><div class="brand">Leitura FORMS</div><div class="subtitle">Acompanhamento de Leituras • <span class="appVersao"></span></div></div></div>
     <div class="topoDir">
     <button type="button" class="btnTopoIc limpar" onclick="limparFormulario()" title="Limpar tudo" aria-label="Limpar tudo">🗑️</button>
+    <button type="button" class="btnTopoIc chave" onclick="trocarChaveIA()" title="Chave da IA" aria-label="Chave da IA">🔑<span class="dotChave" id="dotChave" hidden></span></button>
     <button type="button" class="btnTopoIc foto" onclick="document.getElementById('fotoInput').click()" title="Foto da conta (preenche sozinho)" aria-label="Foto da conta (preenche sozinho)">📷</button>
     <button type="button" class="btnAtualizarTopo" id="btnAtualizarApp" title="Atualizar aplicativo" aria-label="Atualizar aplicativo"><span class="ic">🔄</span><span class="appVersao"></span></button>
     <button type="button" class="count" id="btnTopo" onclick="alternarPainelEtapas()" aria-label="Ver as etapas com leitura no mês"><b><span id="totalTop">0</span> <i class="setinha">▾</i></b>no mês</button>
@@ -321,6 +327,7 @@ input[type=date]{line-height:40px}
           <div class="cands" id="fotoCands"></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button type="button" class="tirar" style="background:#e8f0fe;color:#1a56b8" onclick="lerComIA()">🤖 Ler com IA</button>
+            <button type="button" class="tirar" style="background:#f4f7f6;color:var(--muted)" onclick="trocarChaveIA()" title="Trocar a chave da IA" aria-label="Trocar a chave da IA">🔑</button>
             <button type="button" class="tirar" onclick="tirarFoto()">✖ Tirar foto</button>
           </div>
         </div>
@@ -470,10 +477,15 @@ const LIVRO_INICIO='2026-11-01';
          etapa em branco mostra só "—" (não corta no iPhone)
    4.7 = saiu o título "Lançar nova leitura"; ficam só 🗑️ e 📷 no topo do formulário
    4.8 = 🗑️ e 📷 subiram para o topo (ao lado do 🔄); no celular sai a frase
-         "Acompanhamento de Leituras" para caber (versão segue no 🔄 e no rodapé) */
-const APP_VERSAO='4.8';
+         "Acompanhamento de Leituras" para caber (versão segue no 🔄 e no rodapé)
+   4.9 = a chave da IA não é mais apagada sozinha (um erro qualquer do Google
+         apagava); aviso mostra o que o Google respondeu; 🔑 para trocar a chave
+   5.0 = etapa pela conta = a que mais aparece entre leitura anterior, atual e
+         próxima (04/12 dava Etapa 3 numa conta da Etapa 2); 🔑 no topo para
+         cadastrar a chave (bolinha laranja quando não tem chave) */
+const APP_VERSAO='5.0';
 
-const APP_DATA='01/11/2026';
+const APP_DATA='05/11/2026';
 document.querySelectorAll('.appVersao').forEach(el=>el.textContent='v'+APP_VERSAO);
 document.getElementById('appData').textContent=APP_DATA;
 
@@ -973,7 +985,8 @@ let fotoAtual=null;       // foto reduzida (dataURL) esperando o Salvar
 let alvoFoto='codigo';
 let tessWorker=null, tessProgresso=null;
 
-function fotoStatus(t){document.getElementById('fotoStatus').innerHTML=t}
+let avisoIA='';   // v4.9: aviso da IA continua na tela enquanto o leitor comum trabalha
+function fotoStatus(t){document.getElementById('fotoStatus').innerHTML=t+(avisoIA&&t&&t.indexOf(avisoIA)<0?'<br>'+avisoIA:'')}
 function mudarAlvo(c){
   alvoFoto=c;
   document.getElementById('alvoCodigo').classList.toggle('on',c==='codigo');
@@ -985,7 +998,7 @@ function marcarAuto(id,valor){
   setTimeout(()=>el.classList.remove('auto'),2500);
 }
 function tirarFoto(){
-  fotoAtual=null; fotoImgOrig=null; modoToque=false;
+  fotoAtual=null; fotoImgOrig=null; modoToque=false; avisoIA='';
   document.getElementById('fotoArea').hidden=true;
   document.getElementById('fotoPrev').removeAttribute('src');
   document.getElementById('fotoCands').innerHTML='';
@@ -1064,7 +1077,7 @@ async function fotoEscolhida(input){
 
   fotoAtual=reduzir(img,1000,false).toDataURL('image/jpeg',0.6);
   document.getElementById('fotoPrev').src=fotoAtual;
-  fotoImgOrig=img; modoToque=false;
+  fotoImgOrig=img; modoToque=false; avisoIA='';
   document.getElementById('recorteDica').innerHTML='🔍 Parte de baixo da conta, ampliada (a leitura escrita à caneta fica aqui). Toque para ver maior.';
 
   // v3.7: com a chave da IA salva, a IA lê tudo (cai no leitor comum se falhar)
@@ -1127,8 +1140,7 @@ async function fotoEscolhida(input){
     dataLanc.value=achado.dataAtual;
     // A "Próxima leitura" vem do calendário da etapa, mesmo se a leitura atual atrasou.
     const eAtual=etapaDoDia(achado.dataAtual);
-    const eProx=etapaDoDia(achado.dataProxima);
-    const e=eProx||eAtual;
+    const e=etapaDaConta(achado.dataAnterior,achado.dataAtual,achado.dataProxima);
     const nota=document.getElementById('etapaNota');
     if(e){
       etapaFiltro.value=String(e);
@@ -1140,7 +1152,7 @@ async function fotoEscolhida(input){
     linhaEtapa='<br>📅 Leitura atual <b>'+brData(achado.dataAtual)+'</b>'
       +(achado.dataProxima?' • próxima <b>'+brData(achado.dataProxima)+'</b>':'')
       +(e?' → <b>Etapa '+e+'</b>':' (fora do calendário, escolha a etapa)')
-      +(eProx&&eAtual!==eProx?'<br>⏰ A leitura foi feita fora do dia da etapa; usei a etapa da próxima leitura.':'');
+      +(e&&eAtual&&eAtual!==e?'<br>⏰ A leitura foi feita fora do dia da etapa; usei a etapa das outras datas da conta.':'');
   }
 
   const partes=[];
@@ -1170,7 +1182,7 @@ const IA_KEY='leitura_forms_chave_ia';
 function chaveIA(){ try{return localStorage.getItem(IA_KEY)||''}catch(_){return ''} }
 function pedirChaveIA(){
   const k=prompt('Cole aqui a sua chave da IA do Google (Gemini).\n\nComo pegar (grátis, sem cartão):\n1. Abra aistudio.google.com\n2. Entre com sua conta Google\n3. Toque em "Get API key" (Criar chave)\n4. Copie e cole aqui.\n\nA chave fica só neste celular.');
-  if(k&&k.trim()){ try{localStorage.setItem(IA_KEY,k.trim())}catch(_){}; return k.trim(); }
+  if(k&&k.trim()){ try{localStorage.setItem(IA_KEY,k.trim())}catch(_){}; marcarChave(); return k.trim(); }
   return '';
 }
 // v3.8: testa a chave pedindo a lista de modelos (não manda foto)
@@ -1179,11 +1191,23 @@ async function testarChaveIA(k){
     const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(k));
     if(r.ok) return true;
     const j=await r.json().catch(()=>({})); const msg=(j.error&&j.error.message)||('erro '+r.status);
-    if(r.status===400||r.status===401||r.status===403) return '❌ O Google recusou essa chave ('+esc(msg.slice(0,120))+'). Copie a chave de novo no AI Studio.';
+    if(r.status===401||/API key not valid|API_KEY_INVALID|API key expired|API key was reported as leaked/i.test(msg)) return '❌ O Google recusou essa chave ('+esc(msg.slice(0,120))+'). Copie a chave de novo no AI Studio.';
     return '⚠️ Não deu para testar agora ('+esc(msg.slice(0,80))+'). Tente de novo.';
   }catch(_){ return '⚠️ Sem internet para testar a chave. Tente de novo.'; }
 }
-function esquecerChaveIA(){ try{localStorage.removeItem(IA_KEY)}catch(_){} }
+async function trocarChaveIA(){
+  const antiga=chaveIA();
+  const k=pedirChaveIA(); if(!k) return;
+  fotoStatus('🔑 Testando a chave...');
+  const ok=await testarChaveIA(k);
+  if(ok!==true&&ok.startsWith('❌')){ if(antiga){try{localStorage.setItem(IA_KEY,antiga)}catch(_){}} else esquecerChaveIA(); marcarChave(); fotoStatus(ok); if(!fotoImgOrig) alert(ok.replace(/<[^>]+>/g,'')); return; }
+  marcarChave();
+  fotoStatus('✅ Chave nova guardada.'+(fotoImgOrig?' Lendo a conta...':''));
+  if(!fotoImgOrig) alert(ok===true?'✅ Chave da IA guardada e funcionando!':'🔑 Chave guardada. (Não deu para testar agora; ela será usada na próxima foto.)');
+  if(fotoImgOrig) lerComIA(true);
+}
+function marcarChave(){ const d=document.getElementById('dotChave'); if(d) d.hidden=!!chaveIA(); }
+function esquecerChaveIA(){ try{localStorage.removeItem(IA_KEY)}catch(_){} marcarChave(); }
 // v4.0: o medidor sempre começa com M, B, 3T, 3G, AR, BG ou AG.
 // Se a IA mandar só números, o 1º dígito era a letra (8/6/0 -> B; 4/1 -> M).
 function corrigirMedidorIA(m){
@@ -1211,8 +1235,8 @@ async function lerComIA(automatico){
     k=pedirChaveIA(); if(!k) return false;
     fotoStatus('🔑 Testando a chave...');
     const ok=await testarChaveIA(k);
-    if(ok!==true){ esquecerChaveIA(); fotoStatus(ok); alert(ok.replace(/<[^>]+>/g,'')); return false; }
-    fotoStatus('✅ Chave da IA funcionando! Lendo a conta...');
+    if(ok!==true&&ok.startsWith('❌')){ esquecerChaveIA(); fotoStatus(ok); alert(ok.replace(/<[^>]+>/g,'')); return false; }
+    fotoStatus(ok===true?'✅ Chave da IA funcionando! Lendo a conta...':'🔑 Chave guardada. Lendo a conta...');
   }
   if(!k) return false;
   fotoStatus('🤖 Lendo a conta com IA...');
@@ -1221,14 +1245,15 @@ async function lerComIA(automatico){
    +'"uc" (NÚMERO DA UNIDADE CONSUMIDORA exatamente como impresso, ex. 2.639.618.045-45), '
    +'"medidor" (coluna MEDIDOR da tabela de baixo, ex. B12911929 ou B0307087; SEMPRE começa com um destes prefixos: M, B, 3T, 3G, AR, BG, AG. Atenção: o B impresso parece o número 8, mas é a letra B), '
    +'"leitura_anterior" e "leitura_atual" (números impressos na tabela do medidor), '
-   +'"data_atual" (LEITURA ATUAL em DATAS DE LEITURAS, dd/mm/aaaa), "proxima" (PRÓXIMA LEITURA, dd/mm/aaaa), '
+   +'"data_anterior" (LEITURA ANTERIOR em DATAS DE LEITURAS, dd/mm/aaaa), "data_atual" (LEITURA ATUAL em DATAS DE LEITURAS, dd/mm/aaaa), "proxima" (PRÓXIMA LEITURA, dd/mm/aaaa), '
+   +'(a foto pode estar de cabeça para baixo ou de lado: leia mesmo assim), '
    +'"caneta" (a LEITURA CORRETA escrita à mão/caneta na conta — normalmente perto da tabela do medidor; só os dígitos; vazio se não houver; NÃO é o número marcado com L/Livro), '
    +'"livro" (número do LIVRO de leitura: pode estar impresso ou escrito à mão com "L", "L.", "Liv" ou "Livro" antes do número, ex. "L 412" -> 412; também vale escrito à mão e circulado longe da tabela do medidor; só os dígitos; vazio se não houver — não confunda com nota fiscal, UC, medidor ou leituras). '
    +'Se houver dois números escritos à mão: o que tem L/Livro (ou circulado) é o "livro"; o outro é a "caneta". Use "" quando não conseguir ler.';
   const montar=rapido=>JSON.stringify({contents:[{parts:[{text:pedido},{inline_data:{mime_type:'image/jpeg',data:b64}}]}],
     generationConfig:Object.assign({responseMimeType:'application/json',temperature:0},rapido?{thinkingConfig:{thinkingBudget:0}}:{})});
   let rapido=true;
-  let dados=null, erro='';
+  let dados=null, erro='', msgErro='';
   for(const modelo of ['gemini-flash-latest','gemini-flash-lite-latest']){
     try{
       let r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+modelo+':generateContent?key='+encodeURIComponent(k),
@@ -1244,7 +1269,8 @@ async function lerComIA(automatico){
         const msg=(j.error&&j.error.message)||'';
         if(r.status===404) { erro='modelo'; continue; }
         if(r.status===429) { erro='limite'; break; }
-        if(/api key|API_KEY|permission|invalid/i.test(msg)||r.status===401||r.status===403){ erro='chave'; break; }
+        msgErro=msg;
+        if(r.status===401||/API key not valid|API_KEY_INVALID|API key expired|API key was reported as leaked/i.test(msg)){ erro='chave'; break; }
         erro='outro'; continue;
       }
       let txt=(((j.candidates||[])[0]||{}).content||{}).parts; txt=txt&&txt[0]&&txt[0].text||'';
@@ -1253,22 +1279,28 @@ async function lerComIA(automatico){
     }catch(_){ erro=erro||'rede'; }
   }
   if(!dados){
-    if(erro==='chave'){ esquecerChaveIA(); fotoStatus('⚠️ A chave da IA não funcionou. Toque em 🤖 Ler com IA e cole a chave de novo.'); }
-    else if(erro==='limite') fotoStatus('⚠️ Muitas leituras seguidas (limite grátis). Espere 1 minuto e toque em 🤖 de novo.');
-    else fotoStatus('⚠️ A IA não respondeu (sem internet?). Usando o leitor comum...');
+    // v4.9: a chave NUNCA é apagada sozinha; o aviso mostra o que o Google respondeu
+    const det=msgErro?'<br><small style="color:var(--muted)">Google: '+esc(msgErro.slice(0,140))+'</small>':'';
+    const btnChave=' <button type="button" class="cand" style="min-height:26px" onclick="trocarChaveIA()">🔑 Trocar chave</button>';
+    if(erro==='chave') avisoIA='⚠️ O Google recusou a chave da IA.'+btnChave+det;
+    else if(erro==='limite') avisoIA='⚠️ Muitas leituras seguidas (limite grátis). Espere 1 minuto e toque em 🤖 de novo.'+det;
+    else if(erro==='rede') avisoIA='⚠️ Sem internet para a IA (usei o leitor comum). Quando voltar a internet, toque em 🤖.';
+    else avisoIA='⚠️ A IA não conseguiu ler essa foto (usei o leitor comum). Toque em 🤖 para tentar de novo.'+det;
+    fotoStatus(avisoIA);
     return false;
   }
   // preenche
+  avisoIA='';
   const partes=[];
   const uc=String(dados.uc||'').trim(); if(uc){ marcarAuto('codigo',uc); partes.push('C: <b>'+esc(uc)+'</b>'); }
   let med=corrigirMedidorIA(dados.medidor);
   if(med){ marcarAuto('medidor',med); partes.push('Medidor: <b>'+esc(med)+'</b>'); }
   const can=String(dados.caneta||'').replace(/\D/g,''); if(can){ marcarAuto('leitura',can); partes.push('Caneta: <b>'+esc(can)+'</b>'); }
   const liv=livroLigado()?String(dados.livro||'').replace(/\D/g,''):''; if(liv){ marcarAuto('livro',liv); partes.push('Livro: <b>'+esc(liv)+'</b>'); }
-  const dAt=dataBR2ISO(dados.data_atual), pr=dataBR2ISO(dados.proxima);
+  const dAt=dataBR2ISO(dados.data_atual), pr=dataBR2ISO(dados.proxima), dAn=dataBR2ISO(dados.data_anterior);
   if(dAt){
     dataLanc.value=dAt;
-    const et=etapaDoDia(pr)||etapaDoDia(dAt);
+    const et=etapaDaConta(dAn,dAt,pr);
     const nota=document.getElementById('etapaNota');
     if(et){ etapaFiltro.value=String(et); nota.className='etapanota'; nota.textContent='📅 pela conta'; renderStages(); }
     partes.push('Data <b>'+brData(dAt)+'</b>'+(et?' → <b>Etapa '+et+'</b>':''));
@@ -1319,7 +1351,7 @@ async function lerNoToque(e,el){
   if(dAt){
     dataLanc.value=dAt;
     const pr=acharDataProxima(txt,dAt);
-    const et=etapaDoDia(pr)||etapaDoDia(dAt);
+    const et=etapaDaConta(acharDataAnterior(txt,dAt),dAt,pr);
     const nota=document.getElementById('etapaNota');
     if(et){ etapaFiltro.value=String(et); nota.className='etapanota'; nota.textContent='📅 pela conta'; renderStages(); }
     partes.push('Data <b>'+brData(dAt)+'</b>'+(et?' → <b>Etapa '+et+'</b>':''));
@@ -1460,7 +1492,29 @@ function extrairDaConta(textos){
   (tudo.toUpperCase().match(/\b[A-Z]?\d{7,9}\b/g)||[]).forEach(n=>add(n.replace(/\s/g,'')));
   (tudo.replace(/,/g,'.').match(/\d{1,3}(?:\.\d{3}){2,4}\s?-\s?\d{1,2}/g)||[]).forEach(n=>add(n.replace(/\s/g,'')));
   return {codigo,medidor:med.valor,letraPosta:med.letraPosta,ant,atu,dataAtual:acharDataAtual([textos.meio,textos.topo,textos.extra].join('\n')),
-    dataProxima:acharDataProxima([textos.meio,textos.extra,textos.topo].join('\n'),acharDataAtual([textos.meio,textos.topo,textos.extra].join('\n'))),cands:cands.slice(0,10)};
+    dataProxima:acharDataProxima([textos.meio,textos.extra,textos.topo].join('\n'),acharDataAtual([textos.meio,textos.topo,textos.extra].join('\n'))),
+    dataAnterior:acharDataAnterior([textos.meio,textos.extra,textos.topo].join('\n'),acharDataAtual([textos.meio,textos.topo,textos.extra].join('\n'))),cands:cands.slice(0,10)};
+}
+// v5.0: etapa pela conta = a que mais aparece entre leitura anterior, atual e próxima
+// (empate: vale a da leitura atual; se não tiver, a da próxima)
+function etapaDaConta(ant,atu,prox){
+  const v={ant:etapaDoDia(ant),atu:etapaDoDia(atu),prox:etapaDoDia(prox)};
+  const cont={}; Object.values(v).forEach(e=>{if(e)cont[e]=(cont[e]||0)+1});
+  let melhor=0,max=0;
+  Object.keys(cont).forEach(e=>{ if(cont[e]>max){max=cont[e];melhor=Number(e);} });
+  if(max>=2) return melhor;
+  return v.atu||v.prox||v.ant||0;
+}
+// Leitura anterior: dd/mm/aa logo ANTES da leitura atual, na mesma linha
+function acharDataAnterior(texto,atual){
+  if(!atual) return '';
+  const p=atual.split('-'); const curta=p[2]+'/'+p[1]+'/'+p[0].slice(2);
+  for(const linha of String(texto).split(/\n+/)){
+    const i=linha.indexOf(curta); if(i<0) continue;
+    const ds=[...linha.slice(0,i).matchAll(/\b(\d{2})\/(\d{2})\/(\d{2})(?!\d)/g)];
+    if(ds.length){ const m=ds[ds.length-1]; return '20'+m[3]+'-'+m[2]+'-'+m[1]; }
+  }
+  return '';
 }
 // Próxima leitura: data com ano de 4 dígitos na MESMA linha, depois da Leitura atual,
 // entre 15 e 50 dias depois dela (assim não confunde com vencimento nem emissão)
@@ -1548,6 +1602,7 @@ etapaPelaData(dataLanc.value);
   if(mudou) localStorage.setItem(KEY,JSON.stringify(registros));})();
 aplicarLista();
 aplicarLivro();
+marcarChave();
 renderStages();
 
 /* v2.0: se o app ficou aberto de um dia pro outro (no fundo do iPhone),
